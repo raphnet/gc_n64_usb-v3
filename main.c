@@ -236,17 +236,17 @@ uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat)
 					// report_id = rq->wValue & 0xff
 					// interface = rq->wIndex
 					*dat = gamepad_report0;
-					printf("Get joy report\r\n");
+					printf_P(PSTR("Get joy report\r\n"));
 					return 9;
 				} else if (report_id == 2) { // 2 : ES playing
 					hid_report_data[0] = report_id;
 					hid_report_data[1] = 0;
 					hid_report_data[2] = _FFB_effect_index;
-					printf("ES playing\r\n");
+					printf_P(PSTR("ES playing\r\n"));
 					*dat = hid_report_data;
 					return 3;
 				} else {
-					printf("Get input report %d ??\r\n", rq->wValue & 0xff);
+					printf_P(PSTR("Get input report %d ??\r\n"), rq->wValue & 0xff);
 				}
 			}
 			break;
@@ -258,7 +258,7 @@ uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat)
 				hid_report_data[2] = 0x1;
 				hid_report_data[3] = 10;
 				hid_report_data[4] = 10;
-				printf("block load\r\n");
+				printf_P(PSTR("block load\r\n"));
 				*dat = hid_report_data;
 				return 5;
 			}
@@ -270,30 +270,30 @@ uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat)
 				// PID pool move report?
 				hid_report_data[3] = 0xff;
 				hid_report_data[4] = 1;
-				printf("simultaneous max\r\n");
+				printf_P(PSTR("simultaneous max\r\n"));
 				*dat = hid_report_data;
 				return 5;
 			}
 			else if (report_id == REPORT_CREATE_EFFECT) {
 				hid_report_data[0] = report_id;
 				hid_report_data[1] = 1;
-				printf("create effect\r\n");
+				printf_P(PSTR("create effect\r\n"));
 				*dat = hid_report_data;
 				return 2;
 			} else {
-				printf("Unknown feature %d\r\n", rq->wValue & 0xff);
+				printf_P(PSTR("Unknown feature %d\r\n"), rq->wValue & 0xff);
 			}
 			break;
 	}
 
-	printf("Unhandled hid get report type=0x%02x, rq=0x%02x, wVal=0x%04x, wLen=0x%04x\r\n", rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
+	printf_P(PSTR("Unhandled hid get report type=0x%02x, rq=0x%02x, wVal=0x%04x, wLen=0x%04x\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
 	return 0;
 }
 
 uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16_t len)
 {
 	if (len < 1) {
-		printf("shrt\n");
+		printf_P(PSTR("shrt\n"));
 		return -1;
 	}
 
@@ -302,31 +302,31 @@ uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16
 		switch(data[0])
 		{
 			case REPORT_DISABLE_ACTUATORS:
-				printf("disable actuators\r\n");
+				printf_P(PSTR("disable actuators\r\n"));
 				break;
 			case REPORT_PID_POOL:
-				printf("pid pool\r\n");
+				printf_P(PSTR("pid pool\r\n"));
 				break;
 			case REPORT_SET_EFFECT:
 				_FFB_effect_index = data[1];
-				printf("set effect %d\n", data[1]);
+				printf_P(PSTR("set effect %d\n"), data[1]);
 				break;
 			case REPORT_SET_PERIODIC:
 				magnitude = data[2];
 				decideVibration();
-				printf("periodic mag: %d", data[2]);
+				printf_P(PSTR("periodic mag: %d"), data[2]);
 				break;
 			case REPORT_SET_CONSTANT_FORCE:
 				if (data[1] == 1) {
 					constant_force = data[2];
 					decideVibration();
-					printf("Constant force");
+					printf_P(PSTR("Constant force"));
 				}
 				break;
 			case REPORT_EFFECT_OPERATION:
 				if (len != 4)
 					return -1;
-				printf("EFFECT OP\n");
+				printf_P(PSTR("EFFECT OP\n"));
 				/* Byte 0 : report ID
 				 * Byte 1 : bit 7=rom flag, bits 6-0=effect block index
 				 * Byte 2 : Effect operation
@@ -368,12 +368,12 @@ uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16
 					case 10: // inertia
 					case 11: // friction
 					case 12: // custom force data
-						printf("Ununsed effect %d\n", data[1] & 0x7F);
+						printf_P(PSTR("Ununsed effect %d\n"), data[1] & 0x7F);
 						break;
 				}
 				break;
 			default:
-				printf("Set output report 0x%02x\r\n", data[0]);
+				printf_P(PSTR("Set output report 0x%02x\r\n"), data[0]);
 		}
 	}
 	else if ((rq->wValue >> 8) == HID_REPORT_TYPE_FEATURE) {
@@ -381,15 +381,15 @@ uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16
 		{
 			case REPORT_CREATE_EFFECT:
 				_FFB_effect_index = data[1];
-				printf("create effect %d\n", data[1]);
+				printf_P(PSTR("create effect %d\n"), data[1]);
 				break;
 
 			default:
-				printf("What?\n");
+				printf_P(PSTR("What?\n"));
 		}
 	}
 	else {
-		printf("impossible\n");
+		printf_P(PSTR("impossible\n"));
 	}
 	return 0;
 }
