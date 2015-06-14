@@ -33,7 +33,7 @@ static void initControlWrite(const struct usb_request *rq)
 	memcpy(&control_write_rq, rq, sizeof(struct usb_request));
 	control_write_len = 0;
 	control_write_in_progress = 1;
-//	printf("Init cw\r\n");
+	printf_P(PSTR("Init cw\r\n"));
 }
 
 static int wcslen(const wchar_t *str)
@@ -323,11 +323,14 @@ static void handleSetupPacket(struct usb_request *rq)
 											};
 											uint16_t todo = rqlen;
 											uint16_t pos = 0;
+
+											// TODO : Without the delays those two printf add, it
+											// does not work. A handshake is missing.
 											printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
-			
+
 											while(1)
 											{
-												printf("pos %d todo %d\r\n", pos, todo);
+												printf_P(PSTR("pos %d todo %d\r\n"), pos, todo);
 												if (todo > 64) {
 													buf2EP(0, ((unsigned char*)g_params->reportdesc)+pos, 64, 
 															64,
@@ -342,7 +345,6 @@ static void handleSetupPacket(struct usb_request *rq)
 													UEINTX &= ~(1<<TXINI);
 													break;
 												}
-												
 											}
 											while (1)
 											{
@@ -471,7 +473,7 @@ ISR(USB_GEN_vect)
 		UDINT &= ~(1<<SUSPI);
 		g_usb_suspend = 1;
 		UDIEN |= (1<<WAKEUPE);
-		printf_P(PSTR("SUSPI\r\n"));
+//		printf_P(PSTR("SUSPI\r\n"));
 		// CPU could now be put in low power mode. Later,
 		// WAKEUPI would wake it up.
 	}
@@ -481,13 +483,13 @@ ISR(USB_GEN_vect)
 		UDINT &= ~(1<<WAKEUPE);
 		if (g_usb_suspend) {
 			g_usb_suspend = 0;
-			printf_P(PSTR("WAKEUPI\r\n"));
+//			printf_P(PSTR("WAKEUPI\r\n"));
 			UDIEN &= ~(1<<WAKEUPE); // woke up. Not needed anymore.
 		}
 	}
 
 	if (i & (1<<EORSTI)) {
-		printf_P(PSTR("EORSTI\r\n"));
+//		printf_P(PSTR("EORSTI\r\n"));
 		g_usb_suspend = 0;
 		setupEndpoints();
 		UDINT &= ~(1<<EORSTI);
@@ -500,7 +502,7 @@ ISR(USB_GEN_vect)
 
 	if (i & (1<<EORSMI)) {
 		UDINT &= ~(1<<EORSMI);
-		printf_P(PSTR("EORSMI\r\n"));
+//		printf_P(PSTR("EORSMI\r\n"));
 	}
 
 	if (i & (1<<UPRSMI)) {
