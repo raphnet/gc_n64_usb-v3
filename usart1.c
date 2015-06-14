@@ -24,6 +24,10 @@ void usart1_init(void)
 {
 	UCSR1B = (1<<TXEN1);
 	UCSR1C = (1<<UCSZ11) | (1<<UCSZ10);
+#ifdef UCSR1D
+	UCSR1D = 0;
+#endif
+
 	UBRR1H = 0;
 #if F_CPU==8000000L
 	UBRR1L = 8; // 57600 at 3.5% error at 8MHz
