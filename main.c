@@ -7,24 +7,22 @@
 
 #include <util/delay.h>
 
+#include "util.h"
 #include "usart1.h"
 #include "usb.h"
 #include "gamepad.h"
 #include "gcn64_protocol.h"
 #include "n64.h"
+#include "bootloader.h"
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(arr)	(sizeof(arr) / sizeof(arr[0]))
-#endif
+uint16_t hid_get_report_main(struct usb_request *rq, const uint8_t **dat);
+uint8_t hid_set_report_main(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
 
-#ifndef LPSTR
-#define LPSTR(s)	((const PROGMEM wchar_t*)(s))
-#endif
-
-uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat);
-uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
+uint16_t hid_get_report_data(struct usb_request *rq, const uint8_t **dat);
+uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
 
 #include "reportdesc.c"
+#include "dataHidReport.c"
 
 const wchar_t *const g_usb_strings[] = {
 	[0] = L"raphnet technologies", 	// 1 : Vendor
@@ -37,6 +35,10 @@ struct cfg0 {
 	struct usb_interface_descriptor interface;
 	struct usb_hid_descriptor hid;
 	struct usb_endpoint_descriptor ep1_in;
+
+	struct usb_interface_descriptor interface_admin;
+	struct usb_hid_descriptor hid_data;
+	struct usb_endpoint_descriptor ep2_in;
 };
 
 static const struct cfg0 cfg0 PROGMEM = {
@@ -44,11 +46,13 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.bLength = sizeof(struct usb_configuration_descriptor),
 		.bDescriptorType = CONFIGURATION_DESCRIPTOR,
 		.wTotalLength = sizeof(cfg0), // includes all descriptors returned together
-		.bNumInterfaces = 1,
+		.bNumInterfaces = 2,
 		.bConfigurationValue = 1,
 		.bmAttributes = CFG_DESC_ATTR_RESERVED, // set Self-powred and remote-wakeup here if needed.
 		.bMaxPower = 25, // for 50mA
 	},
+
+	// Main interface, HID
 	.interface = {
 		.bLength = sizeof(struct usb_interface_descriptor),
 		.bDescriptorType = INTERFACE_DESCRIPTOR,
@@ -76,6 +80,36 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.wMaxPacketsize = 64,
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
+
+	// Second HID interface for config and update
+	.interface_admin = {
+		.bLength = sizeof(struct usb_interface_descriptor),
+		.bDescriptorType = INTERFACE_DESCRIPTOR,
+		.bInterfaceNumber = 1,
+		.bAlternateSetting = 0,
+		.bNumEndpoints = 1,
+		.bInterfaceClass = USB_DEVICE_CLASS_HID,
+		.bInterfaceSubClass = HID_SUBCLASS_NONE,
+		.bInterfaceProtocol = HID_PROTOCOL_NONE,
+	},
+	.hid_data = {
+		.bLength = sizeof(struct usb_hid_descriptor),
+		.bDescriptorType = HID_DESCRIPTOR,
+		.bcdHid = 0x0101,
+		.bCountryCode = HID_COUNTRY_NOT_SUPPORTED,
+		.bNumDescriptors = 1, // Only a report descriptor
+		.bClassDescriptorType = REPORT_DESCRIPTOR,
+		.wClassDescriptorLength = sizeof(dataHidReport),
+	},
+	.ep2_in = {
+		.bLength = sizeof(struct usb_endpoint_descriptor),
+		.bDescriptorType = ENDPOINT_DESCRIPTOR,
+		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 2, // 0x82
+		.bmAttributes = TRANSFER_TYPE_INT,
+		.wMaxPacketsize = 64,
+		.bInterval = LS_FS_INTERVAL_MS(1),
+	},
+
 };
 
 const struct usb_device_descriptor device_descriptor PROGMEM = {
@@ -95,6 +129,8 @@ const struct usb_device_descriptor device_descriptor PROGMEM = {
 	.iSerialNumber = 3,
 };
 
+/** **/
+
 static struct usb_parameters usb_params = {
 	.flags = USB_PARAM_FLAG_CONFDESC_PROGMEM |
 				USB_PARAM_FLAG_DEVDESC_PROGMEM |
@@ -104,10 +140,22 @@ static struct usb_parameters usb_params = {
 	.configdesc_ttllen = sizeof(cfg0),
 	.num_strings = ARRAY_SIZE(g_usb_strings),
 	.strings = g_usb_strings,
-	.reportdesc = gcn64_usbHidReportDescriptor,
-	.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
-	.getReport = hid_get_report,
-	.setReport = hid_set_report,
+
+	.n_hid_interfaces = 2,
+	.hid_params = {
+		[0] = {
+			.reportdesc = gcn64_usbHidReportDescriptor,
+			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
+			.getReport = hid_get_report_main,
+			.setReport = hid_set_report_main,
+		},
+		[1] = {
+			.reportdesc = dataHidReport,
+			.reportdesc_len = sizeof(dataHidReport),
+			.getReport = hid_get_report_data,
+			.setReport = hid_set_report_data,
+		},
+	},
 };
 
 void hwinit(void)
@@ -221,13 +269,14 @@ static void decideVibration(void)
 	}
 }
 
-uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat)
+uint16_t hid_get_report_main(struct usb_request *rq, const uint8_t **dat)
 {
 	uint8_t report_id = (rq->wValue & 0xff);
 
 	// USB HID 1.11 section 7.2.1 Get_Report
 	// wValue high byte : report type
 	// wValue low byte : report id
+	// wIndex Interface
 	switch (rq->wValue >> 8)
 	{
 		case HID_REPORT_TYPE_INPUT:
@@ -290,7 +339,7 @@ uint16_t hid_get_report(struct usb_request *rq, const uint8_t **dat)
 	return 0;
 }
 
-uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16_t len)
+uint8_t hid_set_report_main(const struct usb_request *rq, const uint8_t *data, uint16_t len)
 {
 	if (len < 1) {
 		printf_P(PSTR("shrt\n"));
@@ -391,6 +440,27 @@ uint8_t hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16
 	else {
 		printf_P(PSTR("impossible\n"));
 	}
+	return 0;
+}
+
+uint16_t hid_get_report_data(struct usb_request *rq, const uint8_t **dat)
+{
+	printf("Get data\n");
+	return 0;
+}
+
+uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, uint16_t len)
+{
+	int i;
+	printf("Set data %d\n", len);
+
+	for (i=0; i<len; i++) {
+		printf("0x%02x ", dat[i]);
+	}
+	printf("\n");
+
+	enterBootLoader();
+
 	return 0;
 }
 

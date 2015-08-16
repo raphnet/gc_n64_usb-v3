@@ -627,7 +627,7 @@ void usb_shutdown(void)
 	UDIEN = 0;
 
 
-	USBCON &= (1<<USBE);
+	USBCON &= ~(1<<USBE);
 	USBCON |= (1<<FRZCLK); // initial value
 #ifdef UHWCON
 	UHWCON &= ~(1<<UVREGE); // Disable USB pad regulator
@@ -710,7 +710,7 @@ void usb_init(const struct usb_parameters *params)
 	g_params = params;
 
 	// Set some initial values
-	USBCON &= (1<<USBE);
+	USBCON &= ~(1<<USBE);
 	USBCON |= (1<<FRZCLK); // initial value
 #ifdef UHWCON
 	UHWCON |= (1<<UVREGE); // Enable USB pad regulator
