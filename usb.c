@@ -318,11 +318,19 @@ static void handleSetupPacket(struct usb_request *rq)
 									case REPORT_DESCRIPTOR:
 										{
 											uint16_t rqlen = rq->wLength;
-											if (rqlen > g_params->reportdesc_len) {
-												rqlen = g_params->reportdesc_len;
-											};
 											uint16_t todo = rqlen;
 											uint16_t pos = 0;
+											unsigned char *reportdesc;
+
+											// HID 1.1 : 7.1.1 Get_Descriptor request. wIndex is the interface number.
+											//
+											if (rq->wIndex > g_params->n_hid_interfaces)
+												break;
+
+											reportdesc = (unsigned char*)g_params->hid_params[rq->wIndex].reportdesc;
+											if (rqlen > g_params->hid_params[rq->wIndex].reportdesc_len) {
+//												rqlen = g_params->hid_params[rq->wIndex].reportdesc_len;
+											};
 
 											// TODO : Without the delays those two printf add, it
 											// does not work. A handshake is missing.
@@ -332,15 +340,15 @@ static void handleSetupPacket(struct usb_request *rq)
 											{
 												printf_P(PSTR("pos %d todo %d\r\n"), pos, todo);
 												if (todo > 64) {
-													buf2EP(0, ((unsigned char*)g_params->reportdesc)+pos, 64, 
+													buf2EP(0, reportdesc+pos, 64,
 															64,
 															g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
 													UEINTX &= ~(1<<TXINI);
 													pos += 64;
 													todo -= 64;
 												} else {
-													buf2EP(0, ((unsigned char*)g_params->reportdesc)+pos, todo, 
-															todo, 
+													buf2EP(0, reportdesc+pos, todo,
+															todo,
 															g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
 													UEINTX &= ~(1<<TXINI);
 													break;
@@ -372,10 +380,14 @@ static void handleSetupPacket(struct usb_request *rq)
 						{
 							case HID_CLSRQ_GET_REPORT:
 								{
-									if (g_params->getReport) {
+									// HID 1.1 : 7.2.1 Get_Report request. wIndex is the interface number.
+									if (rq->wIndex > g_params->n_hid_interfaces)
+										break;
+
+									if (g_params->hid_params[rq->wIndex].getReport) {
 										const unsigned char *data;
 										uint16_t len;
-										len = g_params->getReport(rq, &data);
+										len = g_params->hid_params[rq->wIndex].getReport(rq, &data);
 										if (len) {
 											buf2EP(0, data, len, rq->wLength, 0);
 										}
@@ -445,8 +457,16 @@ static void handleDataPacket(const struct usb_request *rq, uint8_t *dat, uint16_
 	uint16_t i;
 
 	if ((rq->bmRequestType & (USB_RQT_TYPE_MASK)) == USB_RQT_CLASS) {
-		if (g_params->setReport) {
-			if (g_params->setReport(rq, dat, len)) {
+
+		// TODO : Cechk for HID_CLSRQ_SET_REPORT in rq->bRequest
+
+		// HID 1.1 : 7.2.2 Set_Report request. wIndex is the interface number.
+
+		if (rq->wIndex > g_params->n_hid_interfaces)
+			return;
+
+		if (g_params->hid_params[rq->wIndex].setReport) {
+			if (g_params->hid_params[rq->wIndex].setReport(rq, dat, len)) {
 				UECONX |= (1<<STALLRQ);
 			} else {
 				// xmit status

@@ -169,6 +169,17 @@ struct usb_hid_descriptor {
 #define USB_PARAM_FLAG_CONFDESC_PROGMEM		2
 #define USB_PARAM_FLAG_REPORTDESC_PROGMEM	4
 
+#define MAX_HID_INTERFACES	2
+
+struct usb_hid_parameters {
+	uint16_t reportdesc_len;
+	const unsigned char *reportdesc;
+
+	// Warning: Called from interrupt handler. Implement accordingly.
+	uint16_t (*getReport)(struct usb_request *rq, const uint8_t **dat);
+	uint8_t (*setReport)(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
+};
+
 struct usb_parameters {
 	uint8_t flags;
 
@@ -183,12 +194,8 @@ struct usb_parameters {
 	uint8_t num_strings;
 	const wchar_t *const *strings;
 
-	uint16_t reportdesc_len;
-	const unsigned char *reportdesc;
-
-	// Warning: Called from interrupt handler. Implement accordingly.
-	uint16_t (*getReport)(struct usb_request *rq, const uint8_t **dat);
-	uint8_t (*setReport)(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
+	uint8_t n_hid_interfaces;
+	struct usb_hid_parameters hid_params[MAX_HID_INTERFACES];
 };
 
 void usb_interruptSend(void *data, int len); // EP1
