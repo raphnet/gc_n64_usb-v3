@@ -26,13 +26,23 @@
 static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions and options **************/
-#define GCN64_DATA_PORT	PORTD
-#define GCN64_DATA_DDR	DDRD
-#define GCN64_DATA_PIN	PIND
-#define GCN64_DATA_BIT	(1<<0)
-#define GCN64_BIT_NUM_S	"0" // for asm
-#define FREQ_IS_16MHZ
-#define DISABLE_INTS_DURING_COMM
+#ifndef STK525
+	#define GCN64_DATA_PORT	PORTD
+	#define GCN64_DATA_DDR	DDRD
+	#define GCN64_DATA_PIN	PIND
+	#define GCN64_DATA_BIT	(1<<0)
+	#define GCN64_BIT_NUM_S	"0" // for asm
+	#define FREQ_IS_16MHZ
+	#define DISABLE_INTS_DURING_COMM
+#else
+	#define GCN64_DATA_PORT	PORTA
+	#define GCN64_DATA_DDR	DDRA
+	#define GCN64_DATA_PIN	PINA
+	#define GCN64_DATA_BIT	(1<<0)
+	#define GCN64_BIT_NUM_S	"0" // for asm
+	#define FREQ_IS_16MHZ
+	#define DISABLE_INTS_DURING_COMM
+#endif
 
 /*
  * \brief Explode bytes to bits
