@@ -30,21 +30,16 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 0x09,0x05,  //    Usage Joystick
 0xA1,0x01,  //    Collection Application
 //axis
-   0x85,0x01,        //    Report ID 1
-	// not sure how this is to work?
-//	0x05, 0x02,						//USAGE_PAGE (Simulation Controls) 
-	//0x09, 0xBB, 					//USAGE (Throttle) 
+//
 	0x09, 0x01,                    //     usage pointer
 	0xA1, 0x00,	 				   // COLLECTION (phys)
-		 0x05, 0x01, // USAGE_PAGE (Generic desktop)
+   		0x85,0x01,        //    Report ID 1
+		0x05, 0x01, // USAGE_PAGE (Generic desktop)
 		0x75, 0x10,                    //     REPORT_SIZE (16)
 		0x95, 0x06,                    //     REPORT_COUNT (6)
 
 		0x15, 0x00,                     //     LOGICAL_MINIMUM (0)
 		0x26, 0x00, 0x7D,            //     LOGICAL_MAXIMUM (32000)
-
-//		0x16, 0x00,                    //     Physical Minimum (0)
-//		0x46, 0x00, 0x7D,             //     Physical Maximum (32000)
 
 		0x09, 0x30,                    //     USAGE (X)
 		0x09, 0x31,                    //     USAGE (Y)
@@ -53,32 +48,23 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 		0x09, 0x35,						//	  USAGE (Rz)
 		0x09, 0x36,						//	  USAGE (Slider)
 		0x81, 0x02,                    //     INPUT 
+    0xc0,               //  END COLLECTION                      
 
 #define NUM_BUTTONS	16
 
 //buttons
-	0x05, 0x09,                    // USAGE_PAGE (Button)
-	0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-	0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
-	0x75, 0x01,                    // REPORT_SIZE (1)
-	0x95, NUM_BUTTONS,                    // REPORT_COUNT (14)
-	0x19, 0x01,                    //   USAGE_MINIMUM (Button 1)
-	0x29, NUM_BUTTONS,                    //   USAGE_MAXIMUM (Button 14)
-	0x75, 0x01,                    //   REPORT_SIZE (1)
-	0x95, NUM_BUTTONS,                    //   REPORT_COUNT (16)
-	0x81, 0x02,                    // INPUT 
-
+	0xA1, 0x00,	 				   // COLLECTION (phys)
+		0x05, 0x09,                    // USAGE_PAGE (Button)
+			0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+		0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
+		0x75, 0x01,                    // REPORT_SIZE (1)
+		0x95, NUM_BUTTONS,                    // REPORT_COUNT (14)
+		0x19, 0x01,                    //   USAGE_MINIMUM (Button 1)
+		0x29, NUM_BUTTONS,                    //   USAGE_MAXIMUM (Button 14)
+		0x75, 0x01,                    //   REPORT_SIZE (1)
+		0x95, NUM_BUTTONS,                    //   REPORT_COUNT (16)
+		0x81, 0x02,                    // INPUT 
     0xc0,               //  END COLLECTION                      
-#if 0
-//???
-   0x06,0x01,0xFF,   //    Usage Page Generic Desktop
-   0x09,0x49,        //    Usage Undefined
-   0x75,0x01,        //    Report Size 1
-   0x95,0x01,        //    Report Count 1
-   0x81,0x02,        //    Input (Variable)
-   0x75,0x07,        //    Report Size 7
-   0x81,0x03,        //    Input (Constant, Variable)
-   #endif
 
 
    0x05,0x0F,        //    Usage Page Physical Interface
@@ -87,7 +73,11 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
       0x85,0x02,    //    Report ID 2
       0x09,0x9F,    //    Usage DS Device is Reset
       0x09,0xA0,    //    Usage DS Device is Pause
-      0x09,0xA4,    //    Usage Actuator Power
+	  // RA: 2015-08-18: Removed this bit since it gets
+	  // mapped to BTN_DEAD in linux's hid-input.c and this
+	  // makes the adapter appear to have 17 buttons.
+	  //
+//      0x09,0xA4,    //    Usage Actuator Power
       0x09,0xA5,    //    Usage Undefined
       0x09,0xA6,    //    Usage Undefined
       0x15,0x00,    //    Logical Minimum 0
@@ -95,19 +85,19 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
       0x35,0x00,    //    Physical Minimum 0
       0x45,0x01,    //    Physical Maximum 1
       0x75,0x01,    //    Report Size 1
-      0x95,0x05,    //    Report Count 5
-      0x81,0x02,    //    Input (Variable)
-      0x95,0x03,    //    Report Count 3
+      0x95,0x04,    //    Report Count 4
+	      0x81,0x02,    //    Input (Variable)
+	  0x95,0x04,    //    Report Count 4
       0x75,0x01,    //    Report Size 1
-      0x81,0x03,    //    Input (Constant, Variable)
-      0x09,0x94,    //    Usage PID Device Control
+	      0x81,0x03,    //    Input (Constant, Variable)
+	  0x09,0x94,    //    Usage PID Device Control
       0x15,0x00,    //    Logical Minimum 0
       0x25,0x01,    //    Logical Maximum 1
       0x35,0x00,    //    Physical Minimum 0
       0x45,0x01,    //    Physical Maximum 1
       0x75,0x01,    //    Report Size 1
       0x95,0x01,    //    Report Count 1
-      0x81,0x02,    //    Input (Variable)
+	      0x81,0x02,    //    Input (Variable)
       0x09,0x22,    //    Usage Effect Block Index
       0x15,0x01,    //    Logical Minimum 1
       0x25,0x28,    //    Logical Maximum 28h (40d)
@@ -115,9 +105,8 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
       0x45,0x28,    //    Physical Maximum 28h (40d)
       0x75,0x07,    //    Report Size 7
       0x95,0x01,    //    Report Count 1
-      0x81,0x02,    //    Input (Variable)
+	      0x81,0x02,    //    Input (Variable)
    0xC0    ,    // End Collection
-
 
    0x09,0x21,    //    Usage Set Effect Report
    0xA1,0x02,    //    Collection Datalink

@@ -16,6 +16,9 @@ all: $(HEXFILE)
 clean:
 	rm -f $(PROGNAME).elf $(PROGNAME).hex $(PROGNAME).map $(OBJS)
 
+main.o: main.c reportdesc.c dataHidReport.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 %.o: %.S
 	$(CC) $(CFLAGS) -c $< -o $@
 

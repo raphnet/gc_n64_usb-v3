@@ -132,7 +132,9 @@ static char n64Update(void)
 	}
 #ifdef BUTTON_A_RUMBLE_TEST
 	must_rumble = force_rumble;
+	//printf("Caps: %02x %02x %02x\r\n", caps[0], caps[1], caps[2]);
 #endif
+
 
 	switch (n64_rumble_state)
 	{
@@ -256,8 +258,6 @@ static char n64Update(void)
 
 		xval += 16000;
 		yval += 16000;
-
-		printf("x: 0x%04x  ->  ", xval, yval);
 
 		last_built_report[1] = ((uint8_t*)&xval)[0];
 		last_built_report[2] = ((uint8_t*)&xval)[1];

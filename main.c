@@ -215,9 +215,11 @@ static unsigned char gamepad_report0[32];
 
 // Output Report IDs for various functions
 #define REPORT_SET_EFFECT			0x01
+#define REPORT_SET_STATUS			0x02
 #define	REPORT_SET_PERIODIC			0x04
 #define REPORT_SET_CONSTANT_FORCE	0x05
 #define REPORT_EFFECT_OPERATION		0x0A
+#define REPORT_EFFECT_BLOCK_IDX		0x0B
 #define REPORT_DISABLE_ACTUATORS	0x0C
 #define REPORT_PID_POOL				0x0D
 
@@ -350,6 +352,12 @@ uint8_t hid_set_report_main(const struct usb_request *rq, const uint8_t *data, u
 
 		switch(data[0])
 		{
+			case REPORT_SET_STATUS:
+				printf_P(PSTR("eff. set stat\r\n"));
+				break;
+			case REPORT_EFFECT_BLOCK_IDX:
+				printf_P(PSTR("eff. blk. idx\r\n"));
+				break;
 			case REPORT_DISABLE_ACTUATORS:
 				printf_P(PSTR("disable actuators\r\n"));
 				break;
