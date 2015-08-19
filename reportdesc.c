@@ -37,12 +37,15 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 	0x09, 0x01,                    //     usage pointer
 	0xA1, 0x00,	 				   // COLLECTION (phys)
 		 0x05, 0x01, // USAGE_PAGE (Generic desktop)
-		0x75, 0x08,                    //     REPORT_SIZE (8)
+		0x75, 0x10,                    //     REPORT_SIZE (16)
 		0x95, 0x06,                    //     REPORT_COUNT (6)
-		0x15, 0x00,                    //     LOGICAL_MINIMUM (0)
-		0x26, 0xFF, 0x00,              //     LOGICAL_MAXIMUM (255)
-		0x35, 0x00,                    //     Physical Minimum (0)
-		0x46, 0xFF, 0x00,              //     Physical Minimum (255)
+
+		0x15, 0x00,                     //     LOGICAL_MINIMUM (0)
+		0x26, 0x00, 0x7D,            //     LOGICAL_MAXIMUM (32000)
+
+//		0x16, 0x00,                    //     Physical Minimum (0)
+//		0x46, 0x00, 0x7D,             //     Physical Maximum (32000)
+
 		0x09, 0x30,                    //     USAGE (X)
 		0x09, 0x31,                    //     USAGE (Y)
 		0x09, 0x33,					   //     USAGE (Rx)

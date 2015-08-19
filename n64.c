@@ -22,7 +22,7 @@
 #include "n64.h"
 #include "gcn64_protocol.h"
 
-#define GCN64_REPORT_SIZE	9
+#define GCN64_REPORT_SIZE	15
 
 #undef BUTTON_A_RUMBLE_TEST
 
@@ -236,31 +236,72 @@ static char n64Update(void)
 	for (i=0; i<4; i++) // Up down left right
 		rb2 |= btns1 & (0x08 >> i) ? (0x04<<i) : 0;
 
-	x = (x ^ 0x80) - 1;
-	y = ((y ^ 0x80) ) ^ 0xFF;
-
-	// The following helps a cheap TTX controller
-	// which uses the full 8 bit range instead
-	// of +/- 80. The specific test here prevents
-	// receiving a value of 128 (instead of -127).
-	//
-	// This will have no effect on "normal" controllers.
-	if (x == 0xFF)
-		x = 0;
-
 	// analog joystick
 	last_built_report[0] = 1; // ID
-	last_built_report[1] = x;
-	last_built_report[2] = y;
 
-	last_built_report[3] = 0x7f;
-	last_built_report[4] = 0x7f;
-	last_built_report[5] = 0x7f;
-	last_built_report[6] = 0x7f;
+	if (1) {
+		int16_t xval, yval;
+
+		xval = (char)x;
+		yval = (char)y;
+
+		if (xval>80) xval = 80; else if (xval<-80) xval = -80;
+		if (yval>80) yval = 80; else if (yval<-80) yval = -80;
+
+		// Scale -80 ... +80 to -16000 ... +16000
+
+		xval *= 200;
+		yval *= 200;
+		yval = -yval;
+
+		xval += 16000;
+		yval += 16000;
+
+		printf("x: 0x%04x  ->  ", xval, yval);
+
+		last_built_report[1] = ((uint8_t*)&xval)[0];
+		last_built_report[2] = ((uint8_t*)&xval)[1];
+
+		last_built_report[3] = ((uint8_t*)&yval)[0];
+		last_built_report[4] = ((uint8_t*)&yval)[1];
+	}
+#ifdef CLASSIC_MODE	// Adapter V1/V2 which required calibration
+	if (1) {
+		// Convert to unsigned
+		x = (x ^ 0x80) - 1;
+		y = ((y ^ 0x80) ) ^ 0xFF;
+
+		// The following helps a cheap TTX controller
+		// which uses the full 8 bit range instead
+		// of +/- 80. The specific test here prevents
+		// receiving a value of 128 (instead of -127).
+		//
+		// This will have no effect on "normal" controllers.
+		if (x == 0xFF)
+			x = 0;
+
+		last_built_report[1] = 0;
+		last_built_report[2] = x;
+
+		last_built_report[3] = 0;
+		last_built_report[4] = y;
+	}
+#endif
+	last_built_report[5] = 0x80;
+	last_built_report[6] = 0x3e;
+
+	last_built_report[7] = 0x80;
+	last_built_report[8] = 0x3e;
+
+	last_built_report[9] = 0x80;
+	last_built_report[10] = 0x3e;
+
+	last_built_report[11] = 0x80;
+	last_built_report[12] = 0x3e;
 
 	// buttons
-	last_built_report[7] = rb1;
-	last_built_report[8] = rb2;
+	last_built_report[13] = rb1;
+	last_built_report[14] = rb2;
 
 	return 0;
 }
