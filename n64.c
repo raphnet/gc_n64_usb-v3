@@ -18,31 +18,30 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <string.h>
-#include "gamepad.h"
+#include "gamepads.h"
 #include "n64.h"
 #include "gcn64_protocol.h"
-
-#define GCN64_REPORT_SIZE	15
 
 #undef BUTTON_A_RUMBLE_TEST
 
 /*********** prototypes *************/
 static void n64Init(void);
 static char n64Update(void);
-static char n64Changed(int id);
-static int n64BuildReport(unsigned char *reportBuffer, int id);
-static void n64SetVibration(int value);
+static char n64Changed(void);
+static void n64GetReport(gamepad_data *dst);
+static void n64SetVibration(char enable);
 
 static char must_rumble = 0;
 #ifdef BUTTON_A_RUMBLE_TEST
 static char force_rumble = 0;
 #endif
 
-/* What was most recently read from the controller */
-static unsigned char last_built_report[GCN64_REPORT_SIZE];
 
-/* What was most recently sent to the host */
-static unsigned char last_sent_report[GCN64_REPORT_SIZE];
+/* What was most recently read from the controller */
+static gamepad_data last_built_report;
+
+/* What was most recently reported through getReport */
+static gamepad_data last_sent_report;
 
 static void n64Init(void)
 {
@@ -92,11 +91,9 @@ static char controlRumble(char enable)
 
 static char n64Update(void)
 {
-	int i;
 	unsigned char count;
 	unsigned char x,y;
 	unsigned char btns1, btns2;
-	unsigned char rb1, rb2;
 	unsigned char caps[3];
 
 	/* Pad answer to N64_GET_CAPABILITIES
@@ -224,84 +221,40 @@ static char n64Update(void)
 	}
 #endif
 
-	// Remap buttons as they always were by this
-	// adapter. Might change in v3 when a N64
-	// specific report descriptor will be used.
-	//
-	rb1 = rb2 = 0;
-	for (i=0; i<4; i++) // A B Z START
-		rb1 |= (btns1 & (0x80 >> i)) ? (0x01<<i) : 0;
-	for (i=0; i<4; i++) // C-UP C-DOWN C-LEFT C-RIGHT
-		rb1 |= btns2 & (0x08 >> i) ? (0x10<<i) : 0;
-	for (i=0; i<2; i++) // L R
-		rb2 |= btns2 & (0x20 >> i) ? (0x01<<i) : 0;
-	for (i=0; i<4; i++) // Up down left right
-		rb2 |= btns1 & (0x08 >> i) ? (0x04<<i) : 0;
+	last_built_report.pad_type = PAD_TYPE_N64;
+	last_built_report.n64.buttons = (btns1 << 8) | btns2;
+	last_built_report.n64.x = x;
+	last_built_report.n64.y = y;
 
-	// analog joystick
-	last_built_report[0] = 1; // ID
+	/* Copy all the data as-is for the raw field */
+	last_built_report.n64.raw_data[0] = btns1;
+	last_built_report.n64.raw_data[1] = btns2;
+	last_built_report.n64.raw_data[2] = x;
+	last_built_report.n64.raw_data[3] = y;
 
-	if (1) {
-		int16_t xval, yval;
-
-		xval = (char)x;
-		yval = (char)y;
-
-		if (xval>80) xval = 80; else if (xval<-80) xval = -80;
-		if (yval>80) yval = 80; else if (yval<-80) yval = -80;
-
-		// Scale -80 ... +80 to -16000 ... +16000
-
-		xval *= 200;
-		yval *= 200;
-		yval = -yval;
-
-		xval += 16000;
-		yval += 16000;
-
-		last_built_report[1] = ((uint8_t*)&xval)[0];
-		last_built_report[2] = ((uint8_t*)&xval)[1];
-
-		last_built_report[3] = ((uint8_t*)&yval)[0];
-		last_built_report[4] = ((uint8_t*)&yval)[1];
-	}
-#ifdef CLASSIC_MODE	// Adapter V1/V2 which required calibration
-	if (1) {
-		// Convert to unsigned
-		x = (x ^ 0x80) - 1;
-		y = ((y ^ 0x80) ) ^ 0xFF;
-
-		// The following helps a cheap TTX controller
-		// which uses the full 8 bit range instead
-		// of +/- 80. The specific test here prevents
-		// receiving a value of 128 (instead of -127).
-		//
-		// This will have no effect on "normal" controllers.
-		if (x == 0xFF)
-			x = 0;
-
-		last_built_report[1] = 0;
-		last_built_report[2] = x;
-
-		last_built_report[3] = 0;
-		last_built_report[4] = y;
-	}
-#endif
-	last_built_report[5] = 0x80;
-	last_built_report[6] = 0x3e;
-
-	last_built_report[7] = 0x80;
-	last_built_report[8] = 0x3e;
-
-	last_built_report[9] = 0x80;
-	last_built_report[10] = 0x3e;
-
-	last_built_report[11] = 0x80;
-	last_built_report[12] = 0x3e;
-
-	// buttons
-	last_built_report[13] = rb1;
-	last_built_report[14] = rb2;
+	/* Some cheap non-official controllers
+	 * use the full 8 bit range instead of the
+	 * normal +-80 observed on official controllers. In
+	 * particular, some units (but not all!) produced
+	 * by TTX. The symptom is usually "The joystick
+	 * left direction does not work".
+	 *
+	 * So I limit values to the -127 to +127 range,
+	 * otherwise it causes problem later
+	 * when the sign is inverted. Using 16 bit
+	 * signed numbers instead of 8 bit would solve
+	 * this, but this is only for cheap, not
+	 * even worth using controllers so I don't
+	 * care.
+	 *
+	 * The joystick will now "work" as bad as it would
+	 * on a N64, or maybe a little better. This should
+	 * help people realise they got what the paid for
+	 * instead of suspecting the adapter. */
+    if (last_built_report.n64.x == -128)
+        last_built_report.n64.x = -127;
+    if (last_built_report.n64.y == -128)
+        last_built_report.n64.y = -127;
 
 	return 0;
 }
@@ -338,32 +291,30 @@ static char n64Probe(void)
 	return 0;
 }
 
-static char n64Changed(int id)
+static char n64Changed(void)
 {
-	return memcmp(last_built_report, last_sent_report, GCN64_REPORT_SIZE);
+	return memcmp(&last_built_report, &last_sent_report, sizeof(gamepad_data));
 }
 
-static int n64BuildReport(unsigned char *reportBuffer, int id)
+static void n64GetReport(gamepad_data *dst)
 {
-	if (reportBuffer)
-		memcpy(reportBuffer, last_built_report, GCN64_REPORT_SIZE);
+	if (dst)
+		memcpy(dst, &last_built_report, sizeof(gamepad_data));
 
-	memcpy(	last_sent_report, last_built_report, GCN64_REPORT_SIZE);
-	return GCN64_REPORT_SIZE;
+	memcpy(&last_sent_report, &last_built_report, sizeof(gamepad_data));
 }
 
-static void n64SetVibration(int value)
+static void n64SetVibration(char enable)
 {
-	must_rumble = value;
+	must_rumble = enable;
 }
 
 static Gamepad N64Gamepad = {
 	.init					= n64Init,
 	.update					= n64Update,
 	.changed				= n64Changed,
-	.buildReport			= n64BuildReport,
+	.getReport				= n64GetReport,
 	.probe					= n64Probe,
-	.num_reports			= 1,
 	.setVibration			= n64SetVibration,
 };
 

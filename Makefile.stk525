@@ -9,7 +9,7 @@ CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT -DSTK525
 LDFLAGS=-mmcu=$(CPU) -Wl,-Map=$(PROGNAME).map
 HEXFILE=$(PROGNAME).hex
 
-OBJS=main.o n64.o gcn64_protocol.o usart1.o usb.o bootloader.o
+OBJS=main.o usbpad.o n64.o gcn64_protocol.o usart1.o usb.o bootloader.o
 
 all: $(HEXFILE)
 
