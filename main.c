@@ -1,19 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
-
 #include <util/delay.h>
 
 #include "util.h"
 #include "usart1.h"
 #include "usb.h"
 #include "gamepads.h"
+#include "bootloader.h"
+
 #include "gcn64_protocol.h"
 #include "n64.h"
-#include "bootloader.h"
+#include "gamecube.h"
 #include "usbpad.h"
 
 uint16_t hid_get_report_main(struct usb_request *rq, const uint8_t **dat);
@@ -479,6 +479,30 @@ uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, ui
 	return 0;
 }
 
+#define NUM_PAD_TYPES	2
+
+static Gamepad *pads[NUM_PAD_TYPES];
+
+void initPads(void)
+{
+	gcn64protocol_hwinit();
+	pads[0] = n64GetGamepad();
+	pads[1] = gamecubeGetGamepad();
+}
+
+Gamepad *detectPad(void)
+{
+	int i;
+
+	for (i=0; i<NUM_PAD_TYPES; i++) {
+		if (pads[i]->probe()) {
+			return pads[i];
+		}
+	}
+	return NULL;
+}
+
+
 int main(void)
 {
 	Gamepad *pad = NULL;
@@ -486,9 +510,10 @@ int main(void)
 
 	hwinit();
 	usart1_init();
-	gcn64protocol_hwinit();
+	initPads();
 
-	pad = n64GetGamepad();
+	/* Init the buffer with idle data */
+	usbpad_buildReport(NULL, gamepad_report0);
 
 	sei();
 	usb_init(&usb_params);
@@ -497,26 +522,37 @@ int main(void)
 	{
 		static char last_v = 0;
 
+		/* Try to auto-detect controller if none*/
+		if (!pad) {
+			pad = detectPad();
+		}
+
 		usb_doTasks();
 		_delay_ms(5);
 		//effect_loop();
 		decideVibration();
-
 		if (last_v != gamepad_vibrate) {
-			if (pad->setVibration) {
+			if (pad && pad->setVibration) {
 				pad->setVibration(gamepad_vibrate);
 			}
 			last_v = gamepad_vibrate;
 		}
 
-		pad->update();
-		if (pad->changed()) {
-			int report_size;
+		if (pad) {
+			pad->update();
 
-			pad->getReport(&pad_data);
-			usbpad_buildReport(&pad_data, gamepad_report0);
-			report_size = usbpad_getReportSize();
-			usb_interruptSend(gamepad_report0, report_size);
+			if (pad->changed()) {
+				int report_size;
+
+				pad->getReport(&pad_data);
+				usbpad_buildReport(&pad_data, gamepad_report0);
+				report_size = usbpad_getReportSize();
+				usb_interruptSend(gamepad_report0, report_size);
+			}
+		} else {
+			/* Just make sure gamepad_report0 holds valid and
+			 * inactive data for the HID GET_REPORT request */
+			usbpad_buildReport(NULL, gamepad_report0);
 		}
 	}
 
