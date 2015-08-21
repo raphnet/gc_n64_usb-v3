@@ -14,8 +14,26 @@ int usbpad_getReportSize(void)
 	return REPORT_SIZE;
 }
 
+static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE])
+{
+	int i;
+
+	dstbuf[0] = REPORT_ID;
+
+	/* Inactive and centered axis */
+	for (i=0; i<6; i++) {
+		dstbuf[1+i*2] = 0x80;
+		dstbuf[2+i*2] = 0x3e;
+	}
+
+	/* Inactive buttons */
+	dstbuf[13] = 0;
+	dstbuf[14] = 0;
+}
+
 static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[REPORT_SIZE])
 {
+	buildIdleReport(dstbuf);
 }
 
 static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbuf[REPORT_SIZE])
@@ -38,21 +56,10 @@ static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbu
 	xval += 16000;
 	yval += 16000;
 
-	dstbuf[0] = REPORT_ID;
 	dstbuf[1] = ((uint8_t*)&xval)[0];
 	dstbuf[2] = ((uint8_t*)&xval)[1];
 	dstbuf[3] = ((uint8_t*)&yval)[0];
 	dstbuf[4] = ((uint8_t*)&yval)[1];
-
-	/* Inactive and centered axis */
-	dstbuf[5] = 0x80;
-	dstbuf[6] = 0x3e;
-	dstbuf[7] = 0x80;
-	dstbuf[8] = 0x3e;
-	dstbuf[9] = 0x80;
-	dstbuf[10] = 0x3e;
-	dstbuf[11] = 0x80;
-	dstbuf[12] = 0x3e;
 
 	/* TODO : Button mapping */
 
@@ -62,15 +69,25 @@ static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbu
 
 void usbpad_buildReport(const gamepad_data *pad_data, unsigned char dstbuf[REPORT_SIZE])
 {
-	switch (pad_data->pad_type)
-	{
-		case PAD_TYPE_N64:
-			buildReportFromN64(&pad_data->n64, dstbuf);
-			break;
+	/* Always start with an idle report. Specific report builders can just
+	 * simply ignore unused parts */
+	buildIdleReport(dstbuf);
 
-		case PAD_TYPE_GAMECUBE:
-			buildReportFromGC(&pad_data->gc, dstbuf);
-			break;
+	if (pad_data)
+	{
+		switch (pad_data->pad_type)
+		{
+			case PAD_TYPE_N64:
+				buildReportFromN64(&pad_data->n64, dstbuf);
+				break;
+
+			case PAD_TYPE_GAMECUBE:
+				buildReportFromGC(&pad_data->gc, dstbuf);
+				break;
+
+			default:
+				break;
+		}
 	}
 }
 
