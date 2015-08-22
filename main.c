@@ -467,24 +467,27 @@ uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, ui
 
 #define NUM_PAD_TYPES	2
 
-static Gamepad *pads[NUM_PAD_TYPES];
-
-void initPads(void)
-{
-	gcn64protocol_hwinit();
-	pads[0] = n64GetGamepad();
-	pads[1] = gamecubeGetGamepad();
-}
-
 Gamepad *detectPad(void)
 {
 	int i;
+	int type;
 
-	for (i=0; i<NUM_PAD_TYPES; i++) {
-		if (pads[i]->probe()) {
-			return pads[i];
-		}
+	type = gcn64_detectController();
+
+	switch (type)
+	{
+		case CONTROLLER_IS_ABSENT:
+		case CONTROLLER_IS_UNKNOWN:
+			return NULL;
+
+		case CONTROLLER_IS_N64:
+			return n64GetGamepad();
+			break;
+
+		case CONTROLLER_IS_GC:
+			return gamecubeGetGamepad();
 	}
+
 	return NULL;
 }
 
@@ -496,7 +499,6 @@ int main(void)
 
 	hwinit();
 	usart1_init();
-	initPads();
 
 	/* Init the buffer with idle data */
 	usbpad_buildReport(NULL, gamepad_report0);
