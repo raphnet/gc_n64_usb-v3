@@ -53,27 +53,53 @@ static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE])
 
 static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[REPORT_SIZE])
 {
-	int16_t xval,yval;
+	int16_t xval,yval,cxval,cyval,ltrig,rtrig;
 	uint16_t buttons;
-
-//	printf("GC x: %4d,  y: %4d\r\n", gc_data->x, gc_data->y);
 
 	/* Force official range */
 	xval = minmax(gc_data->x, -100, 100);
 	yval = minmax(gc_data->y, -100, 100);
+	cxval = minmax(gc_data->cx, -100, 100);
+	cyval = minmax(gc_data->cy, -100, 100);
+	ltrig = gc_data->lt;
+	rtrig = gc_data->rt;
 
 	/* Scale -100 ... + 1000 to -16000 ... +16000 */
 	xval *= 160;
 	yval *= 160;
+	// TODO : Is C-stick different?
+	cxval *= 160;
+	cyval *= 160;
+
+	/* Scane 0...255 to 0...16000 */
+	ltrig *= 63;
+	if (ltrig > 16000) ltrig=16000;
+	rtrig *= 63;
+	if (rtrig > 16000) rtrig=16000;
 
 	/* Unsign for HID report */
 	xval += 16000;
 	yval += 16000;
+	cxval += 16000;
+	cyval += 16000;
+	ltrig += 16000;
+	rtrig += 16000;
 
 	dstbuf[1] = ((uint8_t*)&xval)[0];
 	dstbuf[2] = ((uint8_t*)&xval)[1];
 	dstbuf[3] = ((uint8_t*)&yval)[0];
 	dstbuf[4] = ((uint8_t*)&yval)[1];
+
+	dstbuf[5] = ((uint8_t*)&cxval)[0];
+	dstbuf[6] = ((uint8_t*)&cxval)[1];
+	dstbuf[7] = ((uint8_t*)&cyval)[0];
+	dstbuf[8] = ((uint8_t*)&cyval)[1];
+
+	dstbuf[9] = ((uint8_t*)&ltrig)[0];
+	dstbuf[10] = ((uint8_t*)&ltrig)[1];
+
+	dstbuf[11] = ((uint8_t*)&rtrig)[0];
+	dstbuf[12] = ((uint8_t*)&rtrig)[1];
 
 	buttons = mappings_do(MAPPING_GAMECUBE_DEFAULT, gc_data->buttons);
 	btnsToReport(buttons, dstbuf+13);

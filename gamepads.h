@@ -35,7 +35,8 @@ typedef struct _n64_pad_data {
 
 typedef struct _gc_pad_data {
 	unsigned char pad_type; // PAD_TYPE_GAMECUBE
-	char x,y,cx,cy,lt,rt;
+	char x,y,cx,cy;
+	unsigned char lt,rt;
 	unsigned short buttons;
 	unsigned char raw_data[GC_RAW_SIZE];
 } gc_pad_data;
