@@ -246,22 +246,8 @@ static unsigned char _FFB_effect_index;
 #define LOOP_MAX    0xFFFF
 static unsigned int _loop_count;
 
-#if 0
-static void effect_loop()
-{
-	if (_loop_count) {
-		if (_loop_count != LOOP_MAX) {
-			_loop_count--;
-		}
-	}
-}
-#endif
-
 static void decideVibration(void)
 {
-//	if (!_loop_count)
-//		vibration_on = 0;
-
 	if (!vibration_on) {
 		gamepad_vibrate = 0;
 	} else {
@@ -528,9 +514,10 @@ int main(void)
 		}
 
 		usb_doTasks();
+
 		_delay_ms(5);
-		//effect_loop();
 		decideVibration();
+
 		if (last_v != gamepad_vibrate) {
 			if (pad && pad->setVibration) {
 				pad->setVibration(gamepad_vibrate);
