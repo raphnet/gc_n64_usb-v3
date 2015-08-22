@@ -38,6 +38,7 @@ static gamepad_data last_built_report;
 /* What was most recently sent to the host */
 static gamepad_data last_sent_report;
 
+static char gc_rumbling = 0;
 static char origins_set = 0;
 static unsigned char orig_x, orig_y, orig_cx, orig_cy;
 
@@ -134,8 +135,8 @@ static char gamecubeUpdate()
 		return 1;
 	}
 
-	/* 
-	 * The wavebird needs time. It does not answer the 
+	/*
+	 * The wavebird needs time. It does not answer the
 	 * folowwing get status command if we don't wait here.
 	 *
 	 * A good 2:1 safety margin has been chosen.
@@ -150,8 +151,8 @@ static char gamecubeUpdate()
 
 	tmpdata[0] = GC_GETSTATUS1;
 	tmpdata[1] = GC_GETSTATUS2;
-	tmpdata[2] = GC_GETSTATUS3(0);
-	
+	tmpdata[2] = GC_GETSTATUS3(gc_rumbling);
+
 	count = gcn64_transaction(tmpdata, 3);
 	if (count != GC_GETSTATUS_REPLY_LENGTH) {
 		return 1;
@@ -185,12 +186,18 @@ static void gamecubeGetReport(gamepad_data *dst)
 		memcpy(dst, &last_built_report, sizeof(gamepad_data));
 }
 
+static void gamecubeVibration(char enable)
+{
+	gc_rumbling = enable;
+}
+
 Gamepad GamecubeGamepad = {
 	.init					= gamecubeInit,
 	.update					= gamecubeUpdate,
 	.changed				= gamecubeChanged,
 	.getReport				= gamecubeGetReport,
 	.probe					= gamecubeProbe,
+	.setVibration			= gamecubeVibration,
 };
 
 Gamepad *gamecubeGetGamepad(void)
