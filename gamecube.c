@@ -92,7 +92,7 @@ void gc_decodeAnswer()
  */
 
 	last_built_report.pad_type = PAD_TYPE_GAMECUBE;
-	last_built_report.gc.buttons = gcn64_protocol_getByte(0) | gcn64_protocol_getByte(8);
+	last_built_report.gc.buttons = gcn64_protocol_getByte(0) | gcn64_protocol_getByte(8) << 8;
 	x = gcn64_protocol_getByte(16);
 	y = gcn64_protocol_getByte(24);
 	cx = gcn64_protocol_getByte(32);
