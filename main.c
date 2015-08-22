@@ -469,8 +469,7 @@ uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, ui
 
 Gamepad *detectPad(void)
 {
-	int i;
-	int type;
+	char type;
 
 	type = gcn64_detectController();
 
