@@ -15,6 +15,8 @@
 #include "n64.h"
 #include "gamecube.h"
 #include "usbpad.h"
+#include "eeprom.h"
+#include "hiddata.h"
 
 uint16_t hid_get_report_main(struct usb_request *rq, const uint8_t **dat);
 uint8_t hid_set_report_main(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
@@ -153,8 +155,8 @@ static struct usb_parameters usb_params = {
 		[1] = {
 			.reportdesc = dataHidReport,
 			.reportdesc_len = sizeof(dataHidReport),
-			.getReport = hid_get_report_data,
-			.setReport = hid_set_report_data,
+			.getReport = hiddata_get_report,
+			.setReport = hiddata_set_report,
 		},
 	},
 };
@@ -444,26 +446,7 @@ uint8_t hid_set_report_main(const struct usb_request *rq, const uint8_t *data, u
 	return 0;
 }
 
-uint16_t hid_get_report_data(struct usb_request *rq, const uint8_t **dat)
-{
-	printf("Get data\n");
-	return 0;
-}
 
-uint8_t hid_set_report_data(const struct usb_request *rq, const uint8_t *dat, uint16_t len)
-{
-	int i;
-	printf("Set data %d\n", len);
-
-	for (i=0; i<len; i++) {
-		printf("0x%02x ", dat[i]);
-	}
-	printf("\n");
-
-	enterBootLoader();
-
-	return 0;
-}
 
 #define NUM_PAD_TYPES	2
 
@@ -490,6 +473,12 @@ Gamepad *detectPad(void)
 	return NULL;
 }
 
+void eeprom_app_ready(void)
+{
+	// TODO : Set serial number from configured value
+}
+
+char g_polling_suspended = 0;
 
 int main(void)
 {
@@ -498,6 +487,7 @@ int main(void)
 
 	hwinit();
 	usart1_init();
+	eeprom_init();
 
 	/* Init the buffer with idle data */
 	usbpad_buildReport(NULL, gamepad_report0);
@@ -516,6 +506,12 @@ int main(void)
 
 		usb_doTasks();
 
+		// Todo : The _delay_ms used to poll the controller at
+		// a fixed interval is slowing down the frequency of
+		// hiddata_doTask calls. Rework this code to use a timer
+		// for polling the controller...
+		hiddata_doTask();
+
 		_delay_ms(5);
 		decideVibration();
 
@@ -526,7 +522,7 @@ int main(void)
 			last_v = gamepad_vibrate;
 		}
 
-		if (pad) {
+		if (pad && !g_polling_suspended) {
 			pad->update();
 
 			if (pad->changed()) {
