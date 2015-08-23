@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include "gcn64.h"
+#include "mempak.h"
 #include "../gcn64_protocol.h"
 #include "../requests.h"
 
@@ -207,3 +208,38 @@ void mempak_dump(gcn64_hdl_t hdl)
 		printf("\n");
 	}
 }
+
+#define NUM_COPIES 4
+
+int mempak_dumpToFile(gcn64_hdl_t hdl, const char *out_filename)
+{
+	unsigned char cardbuf[0x8000];
+	FILE *fptr;
+	int copies;
+
+	printf("Init pak\n");
+	mempak_init(hdl);
+	printf("Reading card...\n");
+	mempak_readAll(hdl, cardbuf);
+
+	printf("Writing to file '%s'\n", out_filename);
+	fptr = fopen(out_filename, "w");
+	if (!fptr) {
+		perror("fopen");
+		return -1;
+	}
+
+	for (copies = 0; copies < NUM_COPIES; copies++) {
+		if (1 != fwrite(cardbuf, sizeof(cardbuf), 1, fptr)) {
+			perror("fwrite");
+			fclose(fptr);
+			return -2;
+		}
+	}
+
+	printf("Done\n");
+
+	fclose(fptr);
+	return 0;
+}
+

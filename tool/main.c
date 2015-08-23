@@ -26,6 +26,7 @@
 
 #include "version.h"
 #include "gcn64.h"
+#include "mempak.h"
 #include "../requests.h"
 #include "../gcn64_protocol.h"
 
@@ -54,7 +55,7 @@ static void printUsage(void)
 	printf("  --gc_getstatus                     Read GC controller status now (turns rumble OFF)\n");
 	printf("  --gc_getstatus_rumble              Read GC controller status now (turns rumble ON)\n");
 	printf("  --n64_getcaps                      Get N64 controller capabilities (or status such as pak present)\n");
-	printf("  --n64_mempak_dump                  Dump (display) N64 mempak contents\n");
+	printf("  --n64_mempak_dump                  Dump N64 mempak contents (Use with --outfile to write to file)\n");
 }
 
 #define OPT_OUTFILE					'o'
@@ -81,7 +82,7 @@ struct option longopts[] = {
 	{ "n64_getcaps", 0, NULL, OPT_N64_GETCAPS },
 	{ "n64_mempak_dump", 0, NULL, OPT_N64_MEMPAK_DUMP },
 	{ "suspend_polling", 0, NULL, OPT_SUSPEND_POLLING },
-	{ "outfile", 0, NULL, OPT_OUTFILE },
+	{ "outfile", 1, NULL, OPT_OUTFILE },
 	{ },
 };
 
@@ -273,7 +274,11 @@ int main(int argc, char **argv)
 				break;
 
 			case OPT_N64_MEMPAK_DUMP:
-				mempak_dump(hdl);
+				if (outfile) {
+					mempak_dumpToFile(hdl, outfile);
+				} else {
+					mempak_dump(hdl);
+				}
 				break;
 		}
 
