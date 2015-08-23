@@ -22,7 +22,7 @@
 
 #undef FORCE_KEYBOARD
 
-#define GCN64_BUF_SIZE	300
+#define GCN64_BUF_SIZE	600
 static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions and options **************/
@@ -109,9 +109,9 @@ void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
 #define TIMING_OFFSET	100 // gives about 12uS. Twice the expected maximum bit period.
 #endif
 
-static unsigned char gcn64_receive()
+static unsigned int gcn64_receive()
 {
-	register unsigned char count=0;
+	register unsigned int count=0;
 
 #define SET_DBG	"	nop\n"
 #define CLR_DBG	"	nop\n"
@@ -125,8 +125,9 @@ static unsigned char gcn64_receive()
 	asm volatile(
 		"	push r30				\n"	// save Z
 		"	push r31				\n"	// save Z
-		
-		"	clr %0					\n"
+		"	clr r27					\n" // clear X (%0)
+		"	clr r26					\n"
+
 		"	clr r16					\n"
 "initial_wait_low:\n"
 		"	inc r16					\n"
@@ -144,8 +145,8 @@ static unsigned char gcn64_receive()
 		"	brmi timeout			\n" // > 127 (approx 50uS timeout)
 		"	sbic %2, "GCN64_BIT_NUM_S"			\n"
 		"	rjmp waitlow_lp			\n"
-	
-		"	inc %0					\n" // count this timed low level
+
+		"	adiw %0, 1					\n" // count this timed low level
 		"	breq overflow			\n" // > 255
 		"	st z+,r16				\n"
 
@@ -156,8 +157,8 @@ static unsigned char gcn64_receive()
 		"	brmi timeout			\n" // > 127
 		"	sbis %2, "GCN64_BIT_NUM_S"		\n"
 		"	rjmp waithigh_lp		\n"
-	
-		"	inc %0					\n" // count this timed high level
+		"	adiw %0, 1				\n" // count this timed high level
+
 		"	breq overflow			\n" // > 255
 		"	st z+,r16				\n"
 
@@ -168,12 +169,12 @@ static unsigned char gcn64_receive()
 "			pop r31				\n" // restore z
 "			pop r30				\n" // restore z
 
-		: 	"=&r" (count)						// %0
+		: 	"=&x" (count)						// %0
 		: 	"z" ((unsigned char volatile *)gcn64_workbuf),		// %1
 			"I" (_SFR_IO_ADDR(GCN64_DATA_PIN)),	// %2
 			"I" (_SFR_IO_ADDR(PORTB)),			// %3
 			"M" (TIMING_OFFSET)					// %4
-		: 	"r16"
+		: 	"r16","memory"
 	);
 
 	return count;
@@ -295,9 +296,9 @@ static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
  * The result is in workbuf.
  *
  **/
-static void gcn64_decodeWorkbuf(unsigned char count)
+static void gcn64_decodeWorkbuf(unsigned int count)
 {
-	unsigned char i;
+	unsigned int i;
 	volatile unsigned char *output = gcn64_workbuf;
 	volatile unsigned char *input = gcn64_workbuf;
 	unsigned char t;
