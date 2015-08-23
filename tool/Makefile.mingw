@@ -1,0 +1,26 @@
+CC=gcc
+LD=$(CC)
+
+CFLAGS=-Wall -g 
+LDFLAGS=-lsetupapi
+
+PREFIX=/usr/local
+
+PROG=wusbmote_ctl
+
+OBJS=main.o wusbmote.o hid.o
+
+.PHONY : clean install
+
+all: $(OBJS)
+	$(LD) $(OBJS) $(LDFLAGS) -o $(PROG)
+
+%.o: %.c %.h
+	$(CC) $(CFLAGS) -c $<
+
+clean:
+	rm -f *.o $(PROG)
+
+install:
+	@echo "Install not done yet. Sorry"
+
