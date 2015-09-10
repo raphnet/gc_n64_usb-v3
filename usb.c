@@ -33,7 +33,7 @@ static void initControlWrite(const struct usb_request *rq)
 	memcpy(&control_write_rq, rq, sizeof(struct usb_request));
 	control_write_len = 0;
 	control_write_in_progress = 1;
-	printf_P(PSTR("Init cw\r\n"));
+//	printf_P(PSTR("Init cw\r\n"));
 }
 
 static int wcslen(const wchar_t *str)
@@ -334,11 +334,11 @@ static void handleSetupPacket(struct usb_request *rq)
 
 											// TODO : Without the delays those two printf add, it
 											// does not work. A handshake is missing.
-											printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
+//											printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
 
 											while(1)
 											{
-												printf_P(PSTR("pos %d todo %d\r\n"), pos, todo);
+//												printf_P(PSTR("pos %d todo %d\r\n"), pos, todo);
 												if (todo > 64) {
 													buf2EP(0, reportdesc+pos, 64,
 															64,
@@ -346,11 +346,13 @@ static void handleSetupPacket(struct usb_request *rq)
 													UEINTX &= ~(1<<TXINI);
 													pos += 64;
 													todo -= 64;
+													while (!(UEINTX & (1<<TXINI)));
 												} else {
 													buf2EP(0, reportdesc+pos, todo,
 															todo,
 															g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
 													UEINTX &= ~(1<<TXINI);
+													while (!(UEINTX & (1<<TXINI)));
 													break;
 												}
 											}
