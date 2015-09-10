@@ -35,6 +35,7 @@ $(PROGNAME).hex: $(PROGNAME).elf
 fuse:
 
 flash: $(HEXFILE)
+	./enter_bootloader.sh
 	./wait_then_flash.sh $(CPU) $(HEXFILE)
 
 chip_erase:
