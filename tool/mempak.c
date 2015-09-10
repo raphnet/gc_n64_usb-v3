@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include "gcn64.h"
+#include "gcn64lib.h"
 #include "mempak.h"
 #include "../gcn64_protocol.h"
 #include "../requests.h"
@@ -122,30 +123,42 @@ int mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[3
 int mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char dst[32])
 {
 	unsigned char cmd[64];
-	int cmdlen;
+	//int cmdlen;
 	int n;
 	uint16_t addr_crc;
 	unsigned char crc;
 
 	addr_crc = __calc_address_crc(addr);
 
+	cmd[0] = N64_EXPANSION_READ;
+	cmd[1] = addr_crc>>8; // Address high byte
+	cmd[2] = addr_crc&0xff; // Address low byte
+
+/*
 	cmd[0] = RQ_GCN64_RAW_SI_COMMAND;
 	cmd[1] = 3;
 	cmd[2] = N64_EXPANSION_READ;
 	cmd[3] = addr_crc>>8; // Address high byte
 	cmd[4] = addr_crc&0xff; // Address low byte
 	cmdlen = 5;
-
+*/
 	//printf("Addr 0x%04x with crc -> 0x%04x\n", addr, addr_crc);
 
-	n = gcn64_exchange(hdl, cmd, cmdlen, cmd, sizeof(cmd));
-	if (n != 35)
+	n = gcn64lib_rawSiCommand(hdl, 0, cmd, 3, cmd, sizeof(cmd));
+	if (n != 33) {
+		printf("Hey! %d\n", n);
 		return -1;
+	}
 
-	memcpy(dst, cmd + 2, 0x20);
+//	n = gcn64_exchange(hdl, cmd, cmdlen, cmd, sizeof(cmd));
+//	if (n != 35)
+//		return -1;
+
+	//memcpy(dst, cmd + 2, 0x20);
+	memcpy(dst, cmd, 0x20);
 
 	crc = __calc_data_crc(dst);
-	if (crc != cmd[34]) {
+	if (crc != cmd[32]) {
 		fprintf(stderr, "Bad CRC reading address 0x%04x\n", addr);
 		return -1;
 	}
@@ -184,7 +197,7 @@ int mempak_readAll(gcn64_hdl_t hdl, unsigned char dstbuf[0x8000])
 	return 0;
 }
 
-void mempak_dump(gcn64_hdl_t hdl)
+int mempak_dump(gcn64_hdl_t hdl)
 {
 	unsigned char cardbuf[0x8000];
 	int i,j;
@@ -193,7 +206,10 @@ void mempak_dump(gcn64_hdl_t hdl)
 	mempak_init(hdl);
 
 	printf("Reading card...\n");
-	mempak_readAll(hdl, cardbuf);
+	i = mempak_readAll(hdl, cardbuf);
+	if (i<0) {
+		return i;
+	}
 
 	for (i=0; i<DUMP_SIZE; i+=0x20) {
 		printf("%04x: ", i);
@@ -207,6 +223,8 @@ void mempak_dump(gcn64_hdl_t hdl)
 		}
 		printf("\n");
 	}
+
+	return 0;
 }
 
 #define NUM_COPIES 4

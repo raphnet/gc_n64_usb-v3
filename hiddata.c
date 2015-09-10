@@ -38,9 +38,8 @@ uint16_t hiddata_get_report(struct usb_request *rq, const uint8_t **dat)
 /*** Get/Set report called from interrupt context! */
 uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uint16_t len)
 {
-	int i;
-
 #ifdef DEBUG
+	int i;
 	printf("Set data %d\n", len);
 	for (i=0; i<len; i++) {
 		printf("0x%02x ", dat[i]);
@@ -57,8 +56,8 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 
 static void hiddata_processCommandBuffer(void)
 {
-	int i;
 	int bits;
+	unsigned char channel;
 
 	if (cmdbuf_len < 1) {
 		state = STATE_IDLE;
@@ -73,11 +72,13 @@ static void hiddata_processCommandBuffer(void)
 			break;
 		case RQ_GCN64_RAW_SI_COMMAND:
 			// TODO : Range checking
-			// cmd : RQ, LEN, data[]
-			bits = gcn64_transaction(cmdbuf+2, cmdbuf[1]);
+			// cmdbuf[] : RQ, CHN, LEN, data[]
+			channel = cmdbuf[1];
+			bits = gcn64_transaction(cmdbuf+3, cmdbuf[2]);
 			cmdbuf_len = bits / 8; // The above return a number of bits
-			gcn64_protocol_getBytes(0, cmdbuf_len, cmdbuf + 2);
-			cmdbuf_len += 2; // Answer: RQ, LEN, data[]
+			gcn64_protocol_getBytes(0, cmdbuf_len, cmdbuf + 3);
+			cmdbuf[2] = cmdbuf_len;
+			cmdbuf_len += 3; // Answer: RQ, CHN, LEN, data[]
 			break;
 		case RQ_GCN64_GET_CONFIG_PARAM:
 			// Cmd : RQ, PARAM
@@ -92,7 +93,8 @@ static void hiddata_processCommandBuffer(void)
 			cmdbuf_len = 2;
 			break;
 		case RQ_GCN64_SUSPEND_POLLING:
-			g_polling_suspended = 1;
+			// CMD: RQ, PARAM
+			g_polling_suspended = cmdbuf[1];
 			break;
 	}
 

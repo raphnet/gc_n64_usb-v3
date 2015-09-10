@@ -480,6 +480,14 @@ void eeprom_app_ready(void)
 
 char g_polling_suspended = 0;
 
+void pollDelay(void)
+{
+	int i;
+	for (i=0; i<g_eeprom_data.cfg.poll_interval[0]; i++) {
+		_delay_ms(1);
+	}
+}
+
 int main(void)
 {
 	Gamepad *pad = NULL;
@@ -512,7 +520,10 @@ int main(void)
 		// for polling the controller...
 		hiddata_doTask();
 
-		_delay_ms(5);
+		if (!g_polling_suspended) {
+			pollDelay();
+		}
+
 		decideVibration();
 
 		if (last_v != gamepad_vibrate) {
