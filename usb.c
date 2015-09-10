@@ -707,6 +707,18 @@ static void pll_init(void)
 
 void usb_init(const struct usb_parameters *params)
 {
+	// Initialize the registers to the default values
+	// from the datasheet. The bootloader that sometimes
+	// runs before we get here (when doing updates) leaves
+	// different values...
+#ifdef UHWCON
+	UHWCON = 0x80;
+#endif
+	USBCON = 0x20;
+	UDCON = 0x01;
+	UDIEN = 0x00;
+	UDADDR = 0x00;
+
 	g_params = params;
 
 	// Set some initial values
