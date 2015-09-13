@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include "hexdump.h"
 #include "gcn64.h"
 #include "gcn64lib.h"
 #include "mempak.h"
@@ -104,20 +105,19 @@ int mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[3
 
 	addr_crc = __calc_address_crc(addr);
 
-	cmd[0] = RQ_GCN64_RAW_SI_COMMAND;
-	cmd[1] = 3;
-	cmd[2] = N64_EXPANSION_READ;
-	cmd[3] = addr_crc>>8; // Address high byte
-	cmd[4] = addr_crc&0xff; // Address low byte
-	memcpy(cmd + 5, data, 0x20);
+	cmd[0] = N64_EXPANSION_WRITE;
+	cmd[1] = addr_crc>>8; // Address high byte
+	cmd[2] = addr_crc&0xff; // Address low byte
+	memcpy(cmd + 3, data, 0x20);
+	cmdlen = 3 + 0x20;
 
-	cmdlen = 5 + 0x20;
-
-	n = gcn64_exchange(hdl, cmd, cmdlen, cmd, sizeof(cmd));
-	if (n != 35)
+	n = gcn64lib_rawSiCommand(hdl, 0, cmd, cmdlen, cmd, sizeof(cmd));
+	if (n != 1) {
+		printf("write block returned != 1 (%d)\n", n);
 		return -1;
+	}
 
-	return 0x20;
+	return cmd[0];
 }
 
 int mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char dst[32])
@@ -133,16 +133,6 @@ int mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char dst[32]
 	cmd[0] = N64_EXPANSION_READ;
 	cmd[1] = addr_crc>>8; // Address high byte
 	cmd[2] = addr_crc&0xff; // Address low byte
-
-/*
-	cmd[0] = RQ_GCN64_RAW_SI_COMMAND;
-	cmd[1] = 3;
-	cmd[2] = N64_EXPANSION_READ;
-	cmd[3] = addr_crc>>8; // Address high byte
-	cmd[4] = addr_crc&0xff; // Address low byte
-	cmdlen = 5;
-*/
-	//printf("Addr 0x%04x with crc -> 0x%04x\n", addr, addr_crc);
 
 	n = gcn64lib_rawSiCommand(hdl, 0, cmd, 3, cmd, sizeof(cmd));
 	if (n != 33) {
@@ -169,16 +159,57 @@ int mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char dst[32]
 int mempak_init(gcn64_hdl_t hdl)
 {
 	unsigned char buf[0x20];
+	int res;
 
 	memset(buf, 0xfe, 32);
-	mempak_writeBlock(hdl, 0x8000, buf);
-	memset(buf, 0x80, 32);
-	mempak_writeBlock(hdl, 0x8000, buf);
+	res = mempak_writeBlock(hdl, 0x8001, buf);
+
+	if (res == 0xe1) {
+		return 0;
+	}
+
+	return -1;
+}
+
+#define DUMP_SIZE	0x8000
+
+int mempak_writeAll(gcn64_hdl_t hdl, unsigned char srcbuf[0x8000])
+{
+	unsigned short addr;
+	unsigned char readback[0x20];
+	int res;
+
+	for (addr = 0x0000; addr < DUMP_SIZE; addr+= 0x20)
+	{
+		printf("Writing address 0x%04x / 0x8000\r", addr); fflush(stdout);
+		res = mempak_writeBlock(hdl, addr, &srcbuf[addr]);
+		if (res < 0) {
+			fprintf(stderr, "Write error\n");
+			return -1;
+		}
+
+		printf("\nwrite returned:0x %02x\n", res);
+		printHexBuf(&srcbuf[addr], res);
+
+
+		if (0x20 != mempak_readBlock(hdl, addr, readback)) {
+			fprintf(stderr, "readback failed\n");
+			return -2;
+		}
+
+		printf("Wrote: ");
+		printHexBuf(&srcbuf[addr], 0x20);
+
+		printf("Read: ");
+		printHexBuf(readback, 0x20);
+
+		break;
+	}
+	printf("\nDone!\n");
 
 	return 0;
 }
 
-#define DUMP_SIZE	0x8000
 
 int mempak_readAll(gcn64_hdl_t hdl, unsigned char dstbuf[0x8000])
 {
@@ -236,7 +267,7 @@ int mempak_dumpToFile(gcn64_hdl_t hdl, const char *out_filename)
 	int copies;
 
 	printf("Init pak\n");
-	mempak_init(hdl);
+//	mempak_init(hdl);
 	printf("Reading card...\n");
 	mempak_readAll(hdl, cardbuf);
 
@@ -260,4 +291,60 @@ int mempak_dumpToFile(gcn64_hdl_t hdl, const char *out_filename)
 	fclose(fptr);
 	return 0;
 }
+
+int mempak_writeFromFile(gcn64_hdl_t hdl, const char *in_filename)
+{
+	unsigned char cardbuf[0x8000];
+	FILE *fptr;
+	long file_size;
+	int i;
+	int num_images = -1;
+	long offset = 0;
+
+	fptr = fopen(in_filename, "rb");
+	if (!fptr) {
+		perror("fopen");
+		return -1;
+	}
+
+	fseek(fptr, 0, SEEK_END);
+	file_size = ftell(fptr);
+	fseek(fptr, 0, SEEK_SET);
+
+	printf("File size: %ld bytes\n", file_size);
+
+	/* Raw binary images. Those can contain more than one card's data. For
+	 * instance, Mupen64 seems to contain four saves. */
+	for (i=0; i<4; i++) {
+		if (file_size == 0x8000*i) {
+			num_images = i+1;
+			printf("MPK file Contains %d image(s)\n", num_images);
+		}
+	}
+
+	if (num_images < 0) {
+		char header[11];
+		char *magic = "123-456-STD";
+		/* If the size is not a fixed multiple, it could be a .N64 file */
+		fread(header, 11, 1, fptr);
+		if (0 == memcmp(header, magic, sizeof(header))) {
+			printf(".N64 file detected\n");
+			// TODO : Extract comments and other info. from the header
+			offset = 0x1040; // Thanks to N-Rage`s Dinput8 Plugin sources
+		}
+	}
+
+	fseek(fptr, offset, SEEK_SET);
+	fread(cardbuf, sizeof(cardbuf), 1, fptr);
+	fclose(fptr);
+
+
+	printf("Init pak\n");
+	mempak_init(hdl);
+	printf("Writing card...\n");
+	mempak_writeAll(hdl, cardbuf);
+
+	return 0;
+}
+
 

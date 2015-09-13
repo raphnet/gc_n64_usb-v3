@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#include "hexdump.h"
 #include "version.h"
 #include "gcn64.h"
 #include "gcn64lib.h"
@@ -60,16 +61,7 @@ static void printUsage(void)
 	printf("  --gc_getstatus_rumble              Read GC controller status now (turns rumble ON)\n");
 	printf("  --n64_getcaps                      Get N64 controller capabilities (or status such as pak present)\n");
 	printf("  --n64_mempak_dump                  Dump N64 mempak contents (Use with --outfile to write to file)\n");
-}
-
-static void printHexBuf(unsigned char *buf, int n)
-{
-	int i;
-
-	for (i=0; i<n; i++) {
-		printf("%02x ", buf[i]);
-	}
-	printf("\n");
+	printf("  --n64_mempak_write file            Write file to N64 mempak\n");
 }
 
 
@@ -86,6 +78,7 @@ static void printHexBuf(unsigned char *buf, int n)
 #define OPT_RESUME_POLLING			307
 #define OPT_SET_POLL_INTERVAL			308
 #define OPT_GET_POLL_INTERVAL			309
+#define OPT_N64_MEMPAK_WRITE			310
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -104,6 +97,7 @@ struct option longopts[] = {
 	{ "outfile", 1, NULL, OPT_OUTFILE },
 	{ "set_poll_rate", 1, NULL, OPT_SET_POLL_INTERVAL },
 	{ "get_poll_rate", 0, NULL, OPT_GET_POLL_INTERVAL },
+	{ "n64_mempak_write", 1, NULL, OPT_N64_MEMPAK_WRITE },
 	{ },
 };
 
@@ -315,6 +309,11 @@ int main(int argc, char **argv)
 				} else {
 					mempak_dump(hdl);
 				}
+				break;
+
+			case OPT_N64_MEMPAK_WRITE:
+				printf("Input file: %s\n", optarg);
+				mempak_writeFromFile(hdl, optarg);
 				break;
 		}
 

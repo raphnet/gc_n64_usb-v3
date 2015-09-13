@@ -358,7 +358,7 @@
                             <property name="can_focus">False</property>
                             <property name="orientation">vertical</property>
                             <child>
-                              <object class="GtkCheckButton" id="checkbutton1">
+                              <object class="GtkCheckButton" id="chkbtn_n64_square">
                                 <property name="label" translatable="yes">N64 Square joystick</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -374,7 +374,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="checkbutton2">
+                              <object class="GtkCheckButton" id="chkbtn_gc_main_square">
                                 <property name="label" translatable="yes">GC Square main stick</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -390,7 +390,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="checkbutton3">
+                              <object class="GtkCheckButton" id="chkbtn_gc_cstick_square">
                                 <property name="label" translatable="yes">GC Square C-stick</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -406,7 +406,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="checkbutton4">
+                              <object class="GtkCheckButton" id="chkbtn_gc_full_sliders">
                                 <property name="label" translatable="yes">GC Full range sliders
 (non-centered)</property>
                                 <property name="visible">True</property>
@@ -423,7 +423,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="checkbutton5">
+                              <object class="GtkCheckButton" id="chkbtn_invert_trig">
                                 <property name="label" translatable="yes">GC Inverted triggers</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>

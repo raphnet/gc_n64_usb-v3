@@ -42,6 +42,30 @@ G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
 	n = gcn64lib_setConfig(app->current_adapter_handle, CFG_PARAM_POLL_INTERVAL0, &buf, 1);
 }
 
+
+G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
+{
+	struct application *app = data;
+	struct {
+		unsigned char cfg_param;
+		GtkCheckButton *chkbtn;
+	} configurable_bits[] = {
+		{ CFG_PARAM_N64_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
+		{ CFG_PARAM_GC_MAIN_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
+		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
+		{ CFG_PARAM_FULL_SLIDERS, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_full_sliders) },
+		{ CFG_PARAM_INVERT_TRIG, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_invert_trig) },
+		{ },
+	};
+	int i;
+	unsigned char buf;
+
+	for (i=0; configurable_bits[i].chkbtn; i++) {
+		buf = gtk_toggle_button_get_active(configurable_bits[i].chkbtn);
+		gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i], &buf, 1);
+	}
+}
+
 G_MODULE_EXPORT void onMainWindowShow(GtkWidget *win, gpointer data)
 {
 	int res;
@@ -132,6 +156,8 @@ G_MODULE_EXPORT void resume_polling(GtkButton *button, gpointer data)
 
 	gcn64lib_suspendPolling(app->current_adapter_handle, 0);
 }
+
+
 
 int
 main( int    argc,
