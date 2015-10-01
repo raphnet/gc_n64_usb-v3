@@ -62,6 +62,13 @@ static void printUsage(void)
 	printf("  --n64_getcaps                      Get N64 controller capabilities (or status such as pak present)\n");
 	printf("  --n64_mempak_dump                  Dump N64 mempak contents (Use with --outfile to write to file)\n");
 	printf("  --n64_mempak_write file            Write file to N64 mempak\n");
+	printf("\n");
+	printf("GC to N64 adapter commands: (For GC to N64 adapter connected to GC/N64 to USB adapter)\n");
+	printf("  --gc_to_n64_info                   Display info on adapter (version, config, etc)\n");
+	printf("\n");
+	printf("Development/Experimental/Research commands: (use at your own risk)\n");
+	printf("  --si_8bit_scan                     Try all possible 1-byte commands, to see which one a controller responds to.\n");
+	printf("  --si_16bit_scan                    Try all possible 2-byte commands, to see which one a controller responds to.\n");
 }
 
 
@@ -79,6 +86,9 @@ static void printUsage(void)
 #define OPT_SET_POLL_INTERVAL			308
 #define OPT_GET_POLL_INTERVAL			309
 #define OPT_N64_MEMPAK_WRITE			310
+#define OPT_SI8BIT_SCAN					311
+#define OPT_SI16BIT_SCAN				312
+#define OPT_GC_TO_N64_INFO				313
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -98,6 +108,9 @@ struct option longopts[] = {
 	{ "set_poll_rate", 1, NULL, OPT_SET_POLL_INTERVAL },
 	{ "get_poll_rate", 0, NULL, OPT_GET_POLL_INTERVAL },
 	{ "n64_mempak_write", 1, NULL, OPT_N64_MEMPAK_WRITE },
+	{ "si_8bit_scan", 0, NULL, OPT_SI8BIT_SCAN },
+	{ "si_16bit_scan", 0, NULL, OPT_SI16BIT_SCAN },
+	{ "gc_to_n64_info", 0, NULL, OPT_GC_TO_N64_INFO },
 	{ },
 };
 
@@ -296,6 +309,7 @@ int main(int argc, char **argv)
 
 			case OPT_N64_GETCAPS:
 				cmd[0] = N64_GET_CAPABILITIES;
+				//cmd[0] = 0xff;
 				n = gcn64lib_rawSiCommand(hdl, 0, cmd, 1, cmd, sizeof(cmd));
 				if (n >= 0) {
 					printf("N64 Get caps[%d]: ", n);
@@ -314,6 +328,18 @@ int main(int argc, char **argv)
 			case OPT_N64_MEMPAK_WRITE:
 				printf("Input file: %s\n", optarg);
 				mempak_writeFromFile(hdl, optarg);
+				break;
+
+			case OPT_SI8BIT_SCAN:
+				gcn64lib_8bit_scan(hdl, 0, 255);
+				break;
+
+			case OPT_SI16BIT_SCAN:
+				gcn64lib_16bit_scan(hdl, 0, 0xffff);
+				break;
+
+			case OPT_GC_TO_N64_INFO:
+				gcn64lib_raphnet_gc_to_n64_getInfo(hdl);
 				break;
 		}
 

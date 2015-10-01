@@ -217,3 +217,4 @@ int gcn64_exchange(gcn64_hdl_t hdl, unsigned char *outcmd, int outlen, unsigned 
 	return n;
 }
 
+

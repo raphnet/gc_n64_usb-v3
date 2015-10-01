@@ -10,6 +10,7 @@
 
 /* Return many unknown bits, but two are about the expansion port. */
 #define N64_GET_CAPABILITIES		0x00
+#define N64_RESET					0xFF
 #define N64_CAPS_REPLY_LENGTH		24
 
 #define OFFSET_EXT_REMOVED			22

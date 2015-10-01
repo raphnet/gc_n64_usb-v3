@@ -1,6 +1,8 @@
 #include <string.h>
+#include <stdio.h>
 #include "gcn64lib.h"
 #include "../requests.h"
+#include "hexdump.h"
 
 int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, unsigned char rx_max)
 {
@@ -75,3 +77,65 @@ int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char 
 
 	return rx_len;
 }
+
+int gcn64lib_16bit_scan(gcn64_hdl_t hdl, unsigned short min, unsigned short max)
+{
+	int id, n;
+	unsigned char buf[64];
+
+	for (id = min; id<=max; id++) {
+		buf[0] = id >> 8;
+		buf[1] = id & 0xff;
+		n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+		if (n > 0) {
+			printf("CMD 0x%04x answer: ", id);
+			printHexBuf(buf, n);
+		}
+	}
+
+	return 0;
+}
+
+int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max)
+{
+	int id, n;
+	unsigned char buf[64];
+
+	for (id = min; id<=max; id++) {
+		buf[0] = id;
+		n = gcn64lib_rawSiCommand(hdl, 0, buf, 1, buf, sizeof(buf));
+		if (n > 0) {
+			printf("CMD 0x%02x answer: ", id);
+			printHexBuf(buf, n);
+		}
+	}
+
+	return 0;
+}
+
+int gcn64lib_raphnet_gc_to_n64_getInfo(gcn64_hdl_t hdl)
+{
+	unsigned char buf[64];
+	int n;
+
+	buf[0] = 'R';
+	buf[1] = 0x01; // Get device info
+
+	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+	if (n<0)
+		return n;
+
+	if (n > 0) {
+		printf("gc_to_n64 adapter info: {\n");
+		printf("\tFirmware version: %s\n", buf+10);
+		printf("\tDefault mapping id: %d\n", buf[0]);
+		printf("\tDeadzone enabled: %d\n", buf[1]);
+		printf("\tOld v1.5 conversion: %d\n", buf[2]);
+		printf("}\n");
+	} else {
+		printf("No answer (old version?)\n");
+	}
+
+	return 0;
+}
+

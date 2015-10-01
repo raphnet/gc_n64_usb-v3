@@ -8,4 +8,8 @@ int gcn64lib_setConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *data
 int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, unsigned char rx_max);
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx);
 
+int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max);
+int gcn64lib_16bit_scan(gcn64_hdl_t hdl, unsigned short min, unsigned short max);
+int gcn64lib_raphnet_gc_to_n64_getInfo(gcn64_hdl_t hdl);
+
 #endif // _gcn64_lib_h__
