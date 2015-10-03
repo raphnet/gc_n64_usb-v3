@@ -2,13 +2,13 @@ CC=gcc
 LD=$(CC)
 
 CFLAGS=-Wall -g `pkg-config hidapi-hidraw --cflags`
-LDFLAGS=`pkg-config hidapi-hidraw --libs`
+LDFLAGS=`pkg-config hidapi-hidraw --libs` -g
 
 PREFIX=/usr/local
 
 PROG=gcn64ctl
 
-OBJS=main.o gcn64.o mempak.o gcn64lib.o hexdump.o
+OBJS=main.o gcn64.o mempak.o gcn64lib.o hexdump.o gc2n64_adapter.o
 
 .PHONY : clean install
 

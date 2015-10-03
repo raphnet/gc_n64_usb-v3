@@ -28,6 +28,7 @@
 #include "version.h"
 #include "gcn64.h"
 #include "gcn64lib.h"
+#include "gc2n64_adapter.h"
 #include "mempak.h"
 #include "../requests.h"
 #include "../gcn64_protocol.h"
@@ -65,6 +66,8 @@ static void printUsage(void)
 	printf("\n");
 	printf("GC to N64 adapter commands: (For GC to N64 adapter connected to GC/N64 to USB adapter)\n");
 	printf("  --gc_to_n64_info                   Display info on adapter (version, config, etc)\n");
+	printf("  --gc_to_n64_echotest               Perform a communication test\n");
+	printf("  --gc_to_n64_update file.hex        Update GC to N64 adapter firmware\n");
 	printf("\n");
 	printf("Development/Experimental/Research commands: (use at your own risk)\n");
 	printf("  --si_8bit_scan                     Try all possible 1-byte commands, to see which one a controller responds to.\n");
@@ -89,6 +92,8 @@ static void printUsage(void)
 #define OPT_SI8BIT_SCAN					311
 #define OPT_SI16BIT_SCAN				312
 #define OPT_GC_TO_N64_INFO				313
+#define OPT_GC_TO_N64_TEST				314
+#define OPT_GC_TO_N64_UPDATE			315
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -111,6 +116,8 @@ struct option longopts[] = {
 	{ "si_8bit_scan", 0, NULL, OPT_SI8BIT_SCAN },
 	{ "si_16bit_scan", 0, NULL, OPT_SI16BIT_SCAN },
 	{ "gc_to_n64_info", 0, NULL, OPT_GC_TO_N64_INFO },
+	{ "gc_to_n64_echotest", 0, NULL, OPT_GC_TO_N64_TEST },
+	{ "gc_to_n64_update", 1, NULL, OPT_GC_TO_N64_UPDATE },
 	{ },
 };
 
@@ -339,7 +346,23 @@ int main(int argc, char **argv)
 				break;
 
 			case OPT_GC_TO_N64_INFO:
-				gcn64lib_raphnet_gc_to_n64_getInfo(hdl);
+				{
+					struct gc2n64_adapter_info inf;
+
+					gc2n64_adapter_getInfo(hdl, &inf);
+					gc2n64_adapter_printInfo(&inf);
+				}
+				break;
+
+			case OPT_GC_TO_N64_TEST:
+				n = gc2n64_adapter_echotest(hdl, 1);
+				if (n != 0) {
+					return -1;
+				}
+				break;
+
+			case OPT_GC_TO_N64_UPDATE:
+				gc2n64_adapter_updateFirmware(hdl, optarg);
 				break;
 		}
 

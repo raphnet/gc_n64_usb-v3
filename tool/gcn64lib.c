@@ -59,6 +59,7 @@ int gcn64lib_suspendPolling(gcn64_hdl_t hdl, unsigned char suspend)
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx)
 {
 	unsigned char cmd[3 + tx_len];
+	unsigned char rep[3 + 64];
 	int cmdlen, rx_len, n;
 
 	cmd[0] = RQ_GCN64_RAW_SI_COMMAND;
@@ -67,13 +68,12 @@ int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char 
 	memcpy(cmd+3, tx, tx_len);
 	cmdlen = 3 + tx_len;
 
-	n = gcn64_exchange(hdl, cmd, cmdlen, rx, max_rx);
+	n = gcn64_exchange(hdl, cmd, cmdlen, rep, sizeof(rep));
 	if (n<0)
 		return n;
 
-	rx_len = rx[2];
-
-	memmove(rx, rx + 3, rx_len);
+	rx_len = rep[2];
+	memcpy(rx, rep + 3, rx_len);
 
 	return rx_len;
 }
@@ -108,32 +108,6 @@ int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max)
 			printf("CMD 0x%02x answer: ", id);
 			printHexBuf(buf, n);
 		}
-	}
-
-	return 0;
-}
-
-int gcn64lib_raphnet_gc_to_n64_getInfo(gcn64_hdl_t hdl)
-{
-	unsigned char buf[64];
-	int n;
-
-	buf[0] = 'R';
-	buf[1] = 0x01; // Get device info
-
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
-	if (n<0)
-		return n;
-
-	if (n > 0) {
-		printf("gc_to_n64 adapter info: {\n");
-		printf("\tFirmware version: %s\n", buf+10);
-		printf("\tDefault mapping id: %d\n", buf[0]);
-		printf("\tDeadzone enabled: %d\n", buf[1]);
-		printf("\tOld v1.5 conversion: %d\n", buf[2]);
-		printf("}\n");
-	} else {
-		printf("No answer (old version?)\n");
 	}
 
 	return 0;
