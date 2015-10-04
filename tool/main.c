@@ -44,6 +44,7 @@ static void printUsage(void)
 	printf("  -s serial             Operate on specified device (required unless -f is specified)\n");
 	printf("  -f, --force           If no serial is specified, use first device detected.\n");
 	printf("  -o, --outfile file    Output file for read operations (eg: --n64-mempak-dump)\n");
+	printf("      --nonstop         Continue testing forever or until an error occurs.\n");
 	printf("\n");
 	printf("Configuration commands:\n");
 	printf("  --set_serial serial                Assign a new device serial number\n");
@@ -66,8 +67,13 @@ static void printUsage(void)
 	printf("\n");
 	printf("GC to N64 adapter commands: (For GC to N64 adapter connected to GC/N64 to USB adapter)\n");
 	printf("  --gc_to_n64_info                   Display info on adapter (version, config, etc)\n");
-	printf("  --gc_to_n64_echotest               Perform a communication test\n");
 	printf("  --gc_to_n64_update file.hex        Update GC to N64 adapter firmware\n");
+	printf("\n");
+	printf("GC to N64 adapter, development/debug commands:\n");
+	printf("  --gc_to_n64_echotest               Perform a communication test (usable with --nonstop)\n");
+	printf("  --gc_to_n64_dump                   Display the firmware content in hex.\n");
+	printf("  --gc_to_n64_enter_bootloader       Jump to the bootloader.\n");
+	printf("  --gc_to_n64_boot_application       Exit bootloader and start application.\n");
 	printf("\n");
 	printf("Development/Experimental/Research commands: (use at your own risk)\n");
 	printf("  --si_8bit_scan                     Try all possible 1-byte commands, to see which one a controller responds to.\n");
@@ -94,6 +100,10 @@ static void printUsage(void)
 #define OPT_GC_TO_N64_INFO				313
 #define OPT_GC_TO_N64_TEST				314
 #define OPT_GC_TO_N64_UPDATE			315
+#define OPT_GC_TO_N64_DUMP				316
+#define OPT_GC_TO_N64_ENTER_BOOTLOADER	317
+#define OPT_GC_TO_N64_BOOT_APPLICATION	318
+#define OPT_NONSTOP						319
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -118,6 +128,10 @@ struct option longopts[] = {
 	{ "gc_to_n64_info", 0, NULL, OPT_GC_TO_N64_INFO },
 	{ "gc_to_n64_echotest", 0, NULL, OPT_GC_TO_N64_TEST },
 	{ "gc_to_n64_update", 1, NULL, OPT_GC_TO_N64_UPDATE },
+	{ "gc_to_n64_dump", 0, NULL, OPT_GC_TO_N64_DUMP },
+	{ "gc_to_n64_enter_bootloader", 0, NULL, OPT_GC_TO_N64_ENTER_BOOTLOADER },
+	{ "gc_to_n64_boot_application", 0, NULL, OPT_GC_TO_N64_BOOT_APPLICATION },
+	{ "nonstop", 0, NULL, OPT_NONSTOP },
 	{ },
 };
 
@@ -151,6 +165,7 @@ int main(int argc, char **argv)
 	struct gcn64_info inf;
 	struct gcn64_info *selected_device = NULL;
 	int verbose = 0, use_first = 0, serial_specified = 0;
+	int nonstop = 0;
 	int cmd_list = 0;
 #define TARGET_SERIAL_CHARS 128
 	wchar_t target_serial[TARGET_SERIAL_CHARS];
@@ -186,6 +201,9 @@ int main(int argc, char **argv)
 			case 'o':
 				outfile = optarg;
 				printf("Output file: %s\n", outfile);
+				break;
+			case OPT_NONSTOP:
+				nonstop = 1;
 				break;
 			case '?':
 				fprintf(stderr, "Unrecognized argument. Try -h\n");
@@ -355,14 +373,38 @@ int main(int argc, char **argv)
 				break;
 
 			case OPT_GC_TO_N64_TEST:
-				n = gc2n64_adapter_echotest(hdl, 1);
-				if (n != 0) {
-					return -1;
+				{
+					int i=0;
+
+					do {
+						n = gc2n64_adapter_echotest(hdl, 1);
+						if (n != 0) {
+							printf("Test failed\n");
+							return -1;
+						}
+						usleep(1000 * (i));
+						i++;
+						if (i>100)
+							i=0;
+					} while (nonstop);
+					printf("Test ok\n");
 				}
 				break;
 
 			case OPT_GC_TO_N64_UPDATE:
 				gc2n64_adapter_updateFirmware(hdl, optarg);
+				break;
+
+			case OPT_GC_TO_N64_DUMP:
+				gc2n64_adapter_dumpFlash(hdl);
+				break;
+
+			case OPT_GC_TO_N64_ENTER_BOOTLOADER:
+				gc2n64_adapter_enterBootloader(hdl);
+				break;
+
+			case OPT_GC_TO_N64_BOOT_APPLICATION:
+				gc2n64_adapter_bootApplication(hdl);
 				break;
 		}
 
