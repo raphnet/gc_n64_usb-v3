@@ -9,32 +9,31 @@
 
 int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int verbose)
 {
-	unsigned char cmd[35];
-	unsigned char buf[64];
+	unsigned char cmd[30];
+	unsigned char buf[30];
 	int i, n;
-	int times;
 
 	cmd[0] = 'R';
 	cmd[1] = 0x00; // echo
-	for (i=0; i<33; i++) {
+	for (i=0; i<28; i++) {
 		cmd[i+2] = 'A'+i;
 	}
 
-	n = gcn64lib_rawSiCommand(hdl, 0, cmd, 35, buf, 35);
+	n = gcn64lib_rawSiCommand(hdl, 0, cmd, sizeof(buf), buf, sizeof(buf));
 	if (n<0) {
 		return n;
 	}
 
 
 	if (verbose) {
-		if ((n != 35) || memcmp(cmd, buf, 35)) {
+		if ((n != sizeof(buf)) || memcmp(cmd, buf, sizeof(buf))) {
 			printf("Test failed\n");
-			printf("    Sent [%d]: ", 35); printHexBuf(cmd, 35);
+			printf("    Sent [%d]: ", (int)sizeof(cmd)); printHexBuf(cmd, sizeof(cmd));
 			printf("Received [%d]: ", n); printHexBuf(buf, n);
 			return -1;
 		}
 	}
-	return (n!= 35) || memcmp(cmd, buf, 35);
+	return (n!= sizeof(buf)) || memcmp(cmd, buf, sizeof(buf));
 }
 
 int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int id)
@@ -104,7 +103,7 @@ void gc2n64_adapter_printInfo(struct gc2n64_adapter_info *inf)
 
 int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, struct gc2n64_adapter_info *inf)
 {
-	unsigned char buf[64];
+	unsigned char buf[32];
 	int n;
 
 	buf[0] = 'R';
@@ -149,7 +148,7 @@ int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl)
 	buf[0] = 'R';
 	buf[1] = 0xf9;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
 	if (n<0)
 		return n;
 
@@ -198,7 +197,7 @@ int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl)
 	buf[0] = 'R';
 	buf[1] = 0xf0;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
 	if (n<0)
 		return n;
 
@@ -217,7 +216,7 @@ int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl)
 
 int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, unsigned int block_id, unsigned char dst[32])
 {
-	unsigned char buf[64];
+	unsigned char buf[32];
 	int n;
 
 	buf[0] = 'R';
@@ -242,10 +241,20 @@ int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, unsigned int block_id, unsign
 int gc2n64_adapter_dumpFlash(gcn64_hdl_t hdl)
 {
 	int i;
-	unsigned char buf[0x2000];
+	unsigned char buf[0x10000];
+	struct gc2n64_adapter_info inf;
 
-	// Atmega8 : 128 pages of 32 words (64 bytes). 8K.
-	for (i=0; i<0x2000; i+= 32)
+	i = gc2n64_adapter_getInfo(hdl, &inf);
+	if (i)
+		return i;
+
+	if (!inf.in_bootloader) {
+		fprintf(stderr, "dumpFlash: Nnot in bootloader\n");
+		return -1;
+	}
+
+	// Atmega168 : 16K
+	for (i=0; i<16*1024; i+= 32)
 	{
 		gc2n64_adapter_boot_readBlock(hdl, i/32, buf + i);
 		printf("0x%04x: ", i);
@@ -256,31 +265,49 @@ int gc2n64_adapter_dumpFlash(gcn64_hdl_t hdl)
 
 int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl)
 {
-	unsigned char buf[64];
+	unsigned char buf[4];
 	int n;
+	int t = 100; // > 100ms timeout
 
 	buf[0] = 'R';
 	buf[1] = 0xff;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 4 + 32, buf, sizeof(buf));
-		if (n<0)
+	/* The bootloader starts the application automatically if it is
+	 * installed. To prevent the application from being restarted right
+	 * away when are entering the bootloader, the bootloader waits
+	 * 50 ms at startup, and if it receives the 'enter bootloader' command
+	 * within this window, the application is not started.
+	 *
+	 * Also, contrary to the application, the bootloader actually answers
+	 * this command. So it doubles as a handshake to know the bootloader has
+	 * started and is ready to receive instructions.
+	 *
+	 * */
+	do {
+		n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+		if (n<0) {
 			return n;
-
-	// No answer since the effect is immediate.
-	_delay_us(100000);
+		}
+		_delay_us(1000);
+		t--;
+		if (!t) {
+			fprintf(stderr, "Timeout waiting for bootloader\n");
+		}
+	}
+	while(n==0);
 
 	return 0;
 }
 
 int gc2n64_adapter_bootApplication(gcn64_hdl_t hdl)
 {
-	unsigned char buf[64];
+	unsigned char buf[2];
 	int n;
 
 	buf[0] = 'R';
 	buf[1] = 0xfe;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 4 + 32, buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
 		if (n<0)
 			return n;
 
@@ -306,51 +333,44 @@ int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, unsigned char *firmware, 
 
 	for (i=0; i<len; i+=32) {
 		block_id = i / 32;
-
-		printf("Block %d / %d\r", block_id+1, len / 32); fflush(stdout);
-
 		buf[0] = 'R';
 		buf[1] = 0xf2;
 		buf[2] = block_id >> 8;
 		buf[3] = block_id & 0xff;
 		memcpy(buf + 4, firmware+i, 32);
 
-		n = gcn64lib_rawSiCommand(hdl, 0, buf, 4 + 32, buf, sizeof(buf));
-		if (n<0)
+		printf("Block %d / %d\r", block_id+1, len / 32); fflush(stdout);
+
+		n = gcn64lib_rawSiCommand(hdl, 0, buf, 4 + 32, buf, 4);
+		if (n<0) {
+			fprintf(stderr, "\nRaw command fialed\n");
 			return n;
-
-		if (n < 1) {
-			fprintf(stderr, "Invalid upload block answer\n");
-//			return -1;
-			goto hope;
-		}
-
-		if (n == 1) {
-			fprintf(stderr, "upload block: Busy\n");
-			return -1;
 		}
 
 		if (n != 4) {
-			fprintf(stderr, "Invalid upload block answer 2\n");
+			fprintf(stderr, "\nInvalid upload block answer\n");
 			return -1;
 		}
 
 		// [0] ACK (should be 0x00)
 		// [1] Need to poll?
-		// [2] Page address
-		// [3] Page address
+		// [2] Block ID high
+		// [3] Block ID low
 
 		if (buf[0] != 0x00) {
-			fprintf(stderr, "Invalid upload block answer 3\n");
+			fprintf(stderr, "Busy\n");
 			return -1;
 		}
 
 		if (buf[1]) {
-hope:
 			if (gc2n64_adapter_boot_waitNotBusy(hdl, 1)) {
+				fprintf(stderr, "Error waiting not busy\n");
 				return -1;
 			}
 		}
+
+//		printf("\n");
+//		printf("Block ID: 0x%04x\n", (buf[2]<<8) | buf[3]);
 	}
 
 	return 0;
@@ -386,10 +406,10 @@ int gc2n64_adapter_waitForBootloader(gcn64_hdl_t hdl, int timeout_s)
 		n = gc2n64_adapter_getInfo(hdl, &inf);
 		// Errors (caused by timeouts) are just ignored since they are expected.
 		if (n == 0) {
+			gc2n64_adapter_printInfo(&inf);
 			if (inf.in_bootloader)
-			return 0;
+				return 0;
 		}
-
 		_delay_s(1);
 	}
 
@@ -403,6 +423,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 	int max_addr;
 	int ret = 0, res;
 	struct gc2n64_adapter_info inf;
+	int i;
 
 	////////////////////
 	printf("gc2n64 firmware update, step [1/7] : Load .hex file...\n");
@@ -424,18 +445,27 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 
 	////////////////////
 	printf("gc2n64 firmware update, step [2/7] : Get adapter info...\n");
-	gc2n64_adapter_getInfo(hdl, &inf);
+	res = gc2n64_adapter_getInfo(hdl, &inf);
+	if (res < 0) {
+		fprintf(stderr, "Failed to read adapter info\n");
+		return -1;
+	}
 	gc2n64_adapter_printInfo(&inf);
 
 	if (inf.in_bootloader) {
 		printf("gc2n64 firmware update, step [3/7] : Enter bootloader... Skipped. Already in bootloader.\n");
 	} else {
 		printf("gc2n64 firmware update, step [3/7] : Enter bootloader...\n");
-		gc2n64_adapter_enterBootloader(hdl);
-		printf("waiting for bootloader...\n");
-		res = gc2n64_adapter_waitForBootloader(hdl, 5);
-		if (res<0) {
-			fprintf(stderr, "Bootloader did not start?\n");
+		res = gc2n64_adapter_enterBootloader(hdl);
+		if (res < 0) {
+			fprintf(stderr, "Failed to enter the bootloader\n");
+			return -1;
+		}
+
+		// Re-read the info structure, as we will need the bootloader start address.
+		res = gc2n64_adapter_getInfo(hdl, &inf);
+		if (res < 0) {
+			fprintf(stderr, "Failed to read info after enterring bootloader\n");
 			return -1;
 		}
 	}
@@ -450,14 +480,27 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 	printf("Ok\n");
 
 	////////////////////
+	// We need to add a marker at the end of the application area (just before the
+	// bootloader) so the bootloader knows an application is installed.
+	if (max_addr >= inf.bootldr.bootloader_start_address - 4) {
+		fprintf(stderr, "No space for marker - application too large. Aborting\n");
+		return -1;
+	}
+	buf[inf.bootldr.bootloader_start_address - 4] = 0x12;
+	buf[inf.bootldr.bootloader_start_address - 3] = 0x34;
+	buf[inf.bootldr.bootloader_start_address - 2] = 0x56;
+	buf[inf.bootldr.bootloader_start_address - 1] = 0x78;
+
 	printf("gc2n64 firmware update, step [5/7] : Write new firmware...\n");
+	// Note: We write up to the bootloader, even if the firmware was shorter (it usually is).
+	// This is to make sure that the marker we placed at the end gets written.
 	res = gc2n64_adapter_sendFirmwareBlocks(hdl, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		return -1;
 	}
 
 	printf("gc2n64 firmware update, step [6/7] : Verify firmware...\n");
-	res = gc2n64_adapter_verifyFirmware(hdl, buf, max_addr);
+	res = gc2n64_adapter_verifyFirmware(hdl, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		printf("Verify failed : Update failed\n");
 		return -1;

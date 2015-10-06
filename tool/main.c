@@ -401,6 +401,7 @@ int main(int argc, char **argv)
 
 			case OPT_GC_TO_N64_ENTER_BOOTLOADER:
 				gc2n64_adapter_enterBootloader(hdl);
+				gc2n64_adapter_waitForBootloader(hdl, 5);
 				break;
 
 			case OPT_GC_TO_N64_BOOT_APPLICATION:
