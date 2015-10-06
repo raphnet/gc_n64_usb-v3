@@ -8,7 +8,7 @@ PREFIX=/usr/local
 
 PROG=gcn64ctl
 
-OBJS=main.o gcn64.o mempak.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o
+OBJS=main.o gcn64.o mempak.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o
 
 .PHONY : clean install
 

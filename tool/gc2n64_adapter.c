@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "gcn64lib.h"
 #include "gc2n64_adapter.h"
 #include "hexdump.h"
 #include "ihex.h"
+#include "delay.h"
 
 int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int verbose)
 {
@@ -184,7 +184,7 @@ int gc2n64_adapter_boot_waitNotBusy(gcn64_hdl_t hdl, int verbose)
 		}
 		printf("%c\b", spinner[c%4]); fflush(stdout);
 		c++;
-		usleep(50000);
+		_delay_us(50000);
 	}
 
 	return 0;
@@ -267,7 +267,7 @@ int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl)
 			return n;
 
 	// No answer since the effect is immediate.
-	usleep(100000);
+	_delay_us(100000);
 
 	return 0;
 }
@@ -390,7 +390,7 @@ int gc2n64_adapter_waitForBootloader(gcn64_hdl_t hdl, int timeout_s)
 			return 0;
 		}
 
-		sleep(1);
+		_delay_s(1);
 	}
 
 	return -1;
