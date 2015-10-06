@@ -423,7 +423,6 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 	int max_addr;
 	int ret = 0, res;
 	struct gc2n64_adapter_info inf;
-	int i;
 
 	////////////////////
 	printf("gc2n64 firmware update, step [1/7] : Load .hex file...\n");
