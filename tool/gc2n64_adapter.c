@@ -7,7 +7,7 @@
 #include "ihex.h"
 #include "delay.h"
 
-int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int verbose)
+int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int channel, int verbose)
 {
 	unsigned char cmd[30];
 	unsigned char buf[30];
@@ -19,7 +19,7 @@ int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int verbose)
 		cmd[i+2] = 'A'+i;
 	}
 
-	n = gcn64lib_rawSiCommand(hdl, 0, cmd, sizeof(buf), buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, channel, cmd, sizeof(buf), buf, sizeof(buf));
 	if (n<0) {
 		return n;
 	}
@@ -36,7 +36,7 @@ int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int verbose)
 	return (n!= sizeof(buf)) || memcmp(cmd, buf, sizeof(buf));
 }
 
-int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int id)
+int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int channel, int id)
 {
 	unsigned char buf[64];
 	unsigned char cmd[4];
@@ -48,7 +48,7 @@ int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int id)
 	cmd[2] = id;
 	cmd[3] = 0; // chunk 0 (size)
 
-	n = gcn64lib_rawSiCommand(hdl, 0, cmd, 4, buf, 4);
+	n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf, 4);
 	if (n<0)
 		return n;
 
@@ -63,7 +63,7 @@ int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int id)
 			cmd[2] = id;
 			cmd[3] = i+1; // chunk 1 is first 32 byte block, 2nd is next 32 bytes, etc
 			printf("Getting block %d\n", i+1);
-			n = gcn64lib_rawSiCommand(hdl, 0, cmd, 4, buf + pos, 32);
+			n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf + pos, 32);
 			if (n<0) {
 				return n;
 			}
@@ -101,7 +101,7 @@ void gc2n64_adapter_printInfo(struct gc2n64_adapter_info *inf)
 	printf("}\n");
 }
 
-int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, struct gc2n64_adapter_info *inf)
+int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_info *inf)
 {
 	unsigned char buf[32];
 	int n;
@@ -109,7 +109,7 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, struct gc2n64_adapter_info *inf)
 	buf[0] = 'R';
 	buf[1] = 0x01; // Get device info
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, sizeof(buf));
 	if (n<0)
 		return n;
 
@@ -140,7 +140,7 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, struct gc2n64_adapter_info *inf)
 	return 0;
 }
 
-int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl)
+int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[64];
 	int n;
@@ -148,7 +148,7 @@ int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl)
 	buf[0] = 'R';
 	buf[1] = 0xf9;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
+	n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, 1);
 	if (n<0)
 		return n;
 
@@ -163,13 +163,13 @@ int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl)
 	return 0; // Idle
 }
 
-int gc2n64_adapter_boot_waitNotBusy(gcn64_hdl_t hdl, int verbose)
+int gc2n64_adapter_boot_waitNotBusy(gcn64_hdl_t hdl, int channel, int verbose)
 {
 	char spinner[4] = { '|','/','-','\\' };
 	int busy, no_reply_count=0;
 	int c=0;
 
-	while ((busy = gc2n64_adapter_boot_isBusy(hdl)))
+	while ((busy = gc2n64_adapter_boot_isBusy(hdl, channel)))
 	{
 		if (busy < 0) {
 			return -1;
@@ -189,7 +189,7 @@ int gc2n64_adapter_boot_waitNotBusy(gcn64_hdl_t hdl, int verbose)
 	return 0;
 }
 
-int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl)
+int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[64];
 	int n;
@@ -197,7 +197,7 @@ int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl)
 	buf[0] = 'R';
 	buf[1] = 0xf0;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
+	n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, 1);
 	if (n<0)
 		return n;
 
@@ -214,7 +214,7 @@ int gc2n64_adapter_boot_eraseAll(gcn64_hdl_t hdl)
 	return 0;
 }
 
-int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, unsigned int block_id, unsigned char dst[32])
+int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, int channel, unsigned int block_id, unsigned char dst[32])
 {
 	unsigned char buf[32];
 	int n;
@@ -224,7 +224,7 @@ int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, unsigned int block_id, unsign
 	buf[2] = block_id >> 8;
 	buf[3] = block_id & 0xff;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 4, buf, sizeof(buf));
+	n = gcn64lib_rawSiCommand(hdl, channel, buf, 4, buf, sizeof(buf));
 	if (n<0)
 		return n;
 
@@ -238,13 +238,13 @@ int gc2n64_adapter_boot_readBlock(gcn64_hdl_t hdl, unsigned int block_id, unsign
 	return 0;
 }
 
-int gc2n64_adapter_dumpFlash(gcn64_hdl_t hdl)
+int gc2n64_adapter_dumpFlash(gcn64_hdl_t hdl, int channel)
 {
 	int i;
 	unsigned char buf[0x10000];
 	struct gc2n64_adapter_info inf;
 
-	i = gc2n64_adapter_getInfo(hdl, &inf);
+	i = gc2n64_adapter_getInfo(hdl, channel, &inf);
 	if (i)
 		return i;
 
@@ -256,14 +256,14 @@ int gc2n64_adapter_dumpFlash(gcn64_hdl_t hdl)
 	// Atmega168 : 16K
 	for (i=0; i<16*1024; i+= 32)
 	{
-		gc2n64_adapter_boot_readBlock(hdl, i/32, buf + i);
+		gc2n64_adapter_boot_readBlock(hdl, channel, i/32, buf + i);
 		printf("0x%04x: ", i);
 		printHexBuf(buf + i, 32);
 	}
 	return 0;
 }
 
-int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl)
+int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[4];
 	int n;
@@ -284,7 +284,7 @@ int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl)
 	 *
 	 * */
 	do {
-		n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, sizeof(buf));
+		n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, sizeof(buf));
 		if (n<0) {
 			return n;
 		}
@@ -299,7 +299,7 @@ int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl)
 	return 0;
 }
 
-int gc2n64_adapter_bootApplication(gcn64_hdl_t hdl)
+int gc2n64_adapter_bootApplication(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[2];
 	int n;
@@ -307,7 +307,7 @@ int gc2n64_adapter_bootApplication(gcn64_hdl_t hdl)
 	buf[0] = 'R';
 	buf[1] = 0xfe;
 
-	n = gcn64lib_rawSiCommand(hdl, 0, buf, 2, buf, 1);
+	n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, 1);
 		if (n<0)
 			return n;
 
@@ -325,7 +325,7 @@ int gc2n64_adapter_bootApplication(gcn64_hdl_t hdl)
 }
 
 // Note: eraseAll needs to be performed first
-int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, unsigned char *firmware, int len)
+int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, int channel, unsigned char *firmware, int len)
 {
 	unsigned char buf[64];
 	int i, block_id;
@@ -341,9 +341,9 @@ int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, unsigned char *firmware, 
 
 		printf("Block %d / %d\r", block_id+1, len / 32); fflush(stdout);
 
-		n = gcn64lib_rawSiCommand(hdl, 0, buf, 4 + 32, buf, 4);
+		n = gcn64lib_rawSiCommand(hdl, channel, buf, 4 + 32, buf, 4);
 		if (n<0) {
-			fprintf(stderr, "\nRaw command fialed\n");
+			fprintf(stderr, "\nRaw command failed\n");
 			return n;
 		}
 
@@ -363,7 +363,7 @@ int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, unsigned char *firmware, 
 		}
 
 		if (buf[1]) {
-			if (gc2n64_adapter_boot_waitNotBusy(hdl, 1)) {
+			if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
 				fprintf(stderr, "Error waiting not busy\n");
 				return -1;
 			}
@@ -376,14 +376,14 @@ int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, unsigned char *firmware, 
 	return 0;
 }
 
-int gc2n64_adapter_verifyFirmware(gcn64_hdl_t hdl, unsigned char *firmware, int len)
+int gc2n64_adapter_verifyFirmware(gcn64_hdl_t hdl, int channel, unsigned char *firmware, int len)
 {
 	unsigned char buf[32];
 	int i;
 
 	for (i=0; i<len; i+=32) {
 
-		gc2n64_adapter_boot_readBlock(hdl, i/32, buf);
+		gc2n64_adapter_boot_readBlock(hdl, channel, i/32, buf);
 		if (memcmp(buf, firmware + i, 32)) {
 			printf("\nMismatch in block address 0x%04x\n", i);
 			printf("Written: "); printHexBuf(firmware + i, 32);
@@ -396,14 +396,14 @@ int gc2n64_adapter_verifyFirmware(gcn64_hdl_t hdl, unsigned char *firmware, int 
 	return 0;
 }
 
-int gc2n64_adapter_waitForBootloader(gcn64_hdl_t hdl, int timeout_s)
+int gc2n64_adapter_waitForBootloader(gcn64_hdl_t hdl, int channel, int timeout_s)
 {
 	struct gc2n64_adapter_info inf;
 	int i;
 	int n;
 
 	for (i=0; i<=timeout_s; i++) {
-		n = gc2n64_adapter_getInfo(hdl, &inf);
+		n = gc2n64_adapter_getInfo(hdl, channel, &inf);
 		// Errors (caused by timeouts) are just ignored since they are expected.
 		if (n == 0) {
 			gc2n64_adapter_printInfo(&inf);
@@ -417,7 +417,7 @@ int gc2n64_adapter_waitForBootloader(gcn64_hdl_t hdl, int timeout_s)
 }
 
 #define FIRMWARE_BUF_SIZE	0x10000
-int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
+int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexfile)
 {
 	unsigned char *buf;
 	int max_addr;
@@ -444,7 +444,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 
 	////////////////////
 	printf("gc2n64 firmware update, step [2/7] : Get adapter info...\n");
-	res = gc2n64_adapter_getInfo(hdl, &inf);
+	res = gc2n64_adapter_getInfo(hdl, channel, &inf);
 	if (res < 0) {
 		fprintf(stderr, "Failed to read adapter info\n");
 		return -1;
@@ -455,14 +455,14 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 		printf("gc2n64 firmware update, step [3/7] : Enter bootloader... Skipped. Already in bootloader.\n");
 	} else {
 		printf("gc2n64 firmware update, step [3/7] : Enter bootloader...\n");
-		res = gc2n64_adapter_enterBootloader(hdl);
+		res = gc2n64_adapter_enterBootloader(hdl, channel);
 		if (res < 0) {
 			fprintf(stderr, "Failed to enter the bootloader\n");
 			return -1;
 		}
 
 		// Re-read the info structure, as we will need the bootloader start address.
-		res = gc2n64_adapter_getInfo(hdl, &inf);
+		res = gc2n64_adapter_getInfo(hdl, channel, &inf);
 		if (res < 0) {
 			fprintf(stderr, "Failed to read info after enterring bootloader\n");
 			return -1;
@@ -471,9 +471,9 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 
 	////////////////////
 	printf("gc2n64 firmware update, step [4/7] : Erase current firmware... "); fflush(stdout);
-	gc2n64_adapter_boot_eraseAll(hdl);
+	gc2n64_adapter_boot_eraseAll(hdl, channel);
 
-	if (gc2n64_adapter_boot_waitNotBusy(hdl, 1)) {
+	if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
 		return -1;
 	}
 	printf("Ok\n");
@@ -493,20 +493,20 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, const char *hexfile)
 	printf("gc2n64 firmware update, step [5/7] : Write new firmware...\n");
 	// Note: We write up to the bootloader, even if the firmware was shorter (it usually is).
 	// This is to make sure that the marker we placed at the end gets written.
-	res = gc2n64_adapter_sendFirmwareBlocks(hdl, buf, inf.bootldr.bootloader_start_address);
+	res = gc2n64_adapter_sendFirmwareBlocks(hdl, channel, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		return -1;
 	}
 
 	printf("gc2n64 firmware update, step [6/7] : Verify firmware...\n");
-	res = gc2n64_adapter_verifyFirmware(hdl, buf, inf.bootldr.bootloader_start_address);
+	res = gc2n64_adapter_verifyFirmware(hdl, channel, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		printf("Verify failed : Update failed\n");
 		return -1;
 	}
 
 	printf("gc2n64 firmware update, step [7/7] : Launch new firmware.\n");
-	gc2n64_adapter_bootApplication(hdl);
+	gc2n64_adapter_bootApplication(hdl, channel);
 
 err:
 	free(buf);

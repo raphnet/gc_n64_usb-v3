@@ -171,6 +171,7 @@ int main(int argc, char **argv)
 	wchar_t target_serial[TARGET_SERIAL_CHARS];
 	const char *short_optstr = "hls:vfo:";
 	const char *outfile = NULL;
+	int gc2n64_channel = 0;
 
 	while((opt = getopt_long(argc, argv, short_optstr, longopts, NULL)) != -1) {
 		switch(opt)
@@ -367,7 +368,7 @@ int main(int argc, char **argv)
 				{
 					struct gc2n64_adapter_info inf;
 
-					gc2n64_adapter_getInfo(hdl, &inf);
+					gc2n64_adapter_getInfo(hdl, gc2n64_channel, &inf);
 					gc2n64_adapter_printInfo(&inf);
 				}
 				break;
@@ -377,7 +378,7 @@ int main(int argc, char **argv)
 					int i=0;
 
 					do {
-						n = gc2n64_adapter_echotest(hdl, 1);
+						n = gc2n64_adapter_echotest(hdl, gc2n64_channel, 1);
 						if (n != 0) {
 							printf("Test failed\n");
 							return -1;
@@ -392,20 +393,20 @@ int main(int argc, char **argv)
 				break;
 
 			case OPT_GC_TO_N64_UPDATE:
-				gc2n64_adapter_updateFirmware(hdl, optarg);
+				gc2n64_adapter_updateFirmware(hdl, gc2n64_channel, optarg);
 				break;
 
 			case OPT_GC_TO_N64_DUMP:
-				gc2n64_adapter_dumpFlash(hdl);
+				gc2n64_adapter_dumpFlash(hdl, gc2n64_channel);
 				break;
 
 			case OPT_GC_TO_N64_ENTER_BOOTLOADER:
-				gc2n64_adapter_enterBootloader(hdl);
-				gc2n64_adapter_waitForBootloader(hdl, 5);
+				gc2n64_adapter_enterBootloader(hdl, gc2n64_channel);
+				gc2n64_adapter_waitForBootloader(hdl, gc2n64_channel, 5);
 				break;
 
 			case OPT_GC_TO_N64_BOOT_APPLICATION:
-				gc2n64_adapter_bootApplication(hdl);
+				gc2n64_adapter_bootApplication(hdl, gc2n64_channel);
 				break;
 		}
 
