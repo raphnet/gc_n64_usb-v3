@@ -114,6 +114,10 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_i
 		return n;
 
 	if (n > 0) {
+		// On N64, when receiving an all 0xFF reply, catch it here.
+		if (buf[0] == 0xff)
+			return -1;
+
 		if (!inf)
 			return 0;
 
@@ -267,10 +271,8 @@ int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[4];
 	int n;
-	int t = 100; // > 100ms timeout
+	int t = 1000; // > 100ms timeout
 
-	buf[0] = 'R';
-	buf[1] = 0xff;
 
 	/* The bootloader starts the application automatically if it is
 	 * installed. To prevent the application from being restarted right
@@ -284,14 +286,22 @@ int gc2n64_adapter_enterBootloader(gcn64_hdl_t hdl, int channel)
 	 *
 	 * */
 	do {
+		buf[0] = 'R';
+		buf[1] = 0xff;
+
 		n = gcn64lib_rawSiCommand(hdl, channel, buf, 2, buf, sizeof(buf));
 		if (n<0) {
 			return n;
+		}
+
+		if (buf[0] == 0xff && buf[1] == 0xff) {
+			n = 0;
 		}
 		_delay_us(1000);
 		t--;
 		if (!t) {
 			fprintf(stderr, "Timeout waiting for bootloader\n");
+			return -1;
 		}
 	}
 	while(n==0);
@@ -425,7 +435,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	struct gc2n64_adapter_info inf;
 
 	////////////////////
-	printf("gc2n64 firmware update, step [1/7] : Load .hex file...\n");
+	printf("step [1/7] : Load .hex file...\n");
 	buf = malloc(FIRMWARE_BUF_SIZE);
 	if (!buf) {
 		perror("malloc");
@@ -443,7 +453,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	printf("Firmware size: %d bytes\n", max_addr+1);
 
 	////////////////////
-	printf("gc2n64 firmware update, step [2/7] : Get adapter info...\n");
+	printf("step [2/7] : Get adapter info...\n");
 	res = gc2n64_adapter_getInfo(hdl, channel, &inf);
 	if (res < 0) {
 		fprintf(stderr, "Failed to read adapter info\n");
@@ -452,9 +462,9 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	gc2n64_adapter_printInfo(&inf);
 
 	if (inf.in_bootloader) {
-		printf("gc2n64 firmware update, step [3/7] : Enter bootloader... Skipped. Already in bootloader.\n");
+		printf("step [3/7] : Enter bootloader... Skipped. Already in bootloader.\n");
 	} else {
-		printf("gc2n64 firmware update, step [3/7] : Enter bootloader...\n");
+		printf("step [3/7] : Enter bootloader...\n");
 		res = gc2n64_adapter_enterBootloader(hdl, channel);
 		if (res < 0) {
 			fprintf(stderr, "Failed to enter the bootloader\n");
@@ -470,7 +480,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	}
 
 	////////////////////
-	printf("gc2n64 firmware update, step [4/7] : Erase current firmware... "); fflush(stdout);
+	printf("step [4/7] : Erase current firmware... "); fflush(stdout);
 	gc2n64_adapter_boot_eraseAll(hdl, channel);
 
 	if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
@@ -490,7 +500,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	buf[inf.bootldr.bootloader_start_address - 2] = 0x56;
 	buf[inf.bootldr.bootloader_start_address - 1] = 0x78;
 
-	printf("gc2n64 firmware update, step [5/7] : Write new firmware...\n");
+	printf("step [5/7] : Write new firmware...\n");
 	// Note: We write up to the bootloader, even if the firmware was shorter (it usually is).
 	// This is to make sure that the marker we placed at the end gets written.
 	res = gc2n64_adapter_sendFirmwareBlocks(hdl, channel, buf, inf.bootldr.bootloader_start_address);
@@ -498,14 +508,14 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 		return -1;
 	}
 
-	printf("gc2n64 firmware update, step [6/7] : Verify firmware...\n");
+	printf("step [6/7] : Verify firmware...\n");
 	res = gc2n64_adapter_verifyFirmware(hdl, channel, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		printf("Verify failed : Update failed\n");
 		return -1;
 	}
 
-	printf("gc2n64 firmware update, step [7/7] : Launch new firmware.\n");
+	printf("step [7/7] : Launch new firmware.\n");
 	gc2n64_adapter_bootApplication(hdl, channel);
 
 err:
