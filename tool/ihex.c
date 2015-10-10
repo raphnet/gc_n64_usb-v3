@@ -121,6 +121,7 @@ int load_ihex(const char *file, unsigned char *dstbuf, int bufsize)
 		}
 	} while (!feof(fptr));
 
+	fclose(fptr);
 	return max_address;
 
 err:
