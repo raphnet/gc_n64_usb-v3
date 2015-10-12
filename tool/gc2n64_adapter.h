@@ -7,6 +7,7 @@ struct gc2n64_adapter_info_app {
 	unsigned char default_mapping_id;
 	unsigned char deadzone_enabled;
 	unsigned char old_v1_5_conversion;
+	unsigned char upgradeable;
 	char version[16];
 };
 

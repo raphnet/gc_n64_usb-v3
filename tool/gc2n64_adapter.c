@@ -1,3 +1,4 @@
+#define _GNU_SOURCE // for memmem
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,6 +91,7 @@ void gc2n64_adapter_printInfo(struct gc2n64_adapter_info *inf)
 		printf("\tDeadzone enabled: %d\n", inf->app.deadzone_enabled);
 		printf("\tOld v1.5 conversion: %d\n", inf->app.old_v1_5_conversion);
 		printf("\tFirmware version: %s\n", inf->app.version);
+		printf("\tUpgradable: %s\n", inf->app.upgradeable ? "Yes":"No (Atmega8)");
 	} else {
 		printf("gc_to_n64 adapter in bootloader mode: {\n");
 
@@ -124,9 +126,10 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_i
 		inf->in_bootloader = buf[0];
 
 		if (!inf->in_bootloader) {
-			inf->app.default_mapping_id = buf[2];
-			inf->app.deadzone_enabled = buf[3];
-			inf->app.old_v1_5_conversion = buf[4];
+			inf->app.default_mapping_id = buf[1];
+			inf->app.deadzone_enabled = buf[2];
+			inf->app.old_v1_5_conversion = buf[3];
+			inf->app.upgradeable = buf[9];
 			inf->app.version[sizeof(inf->app.version)-1]=0;
 			strncpy(inf->app.version, (char*)buf+10, sizeof(inf->app.version)-1);
 		} else {
@@ -433,6 +436,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	int max_addr;
 	int ret = 0, res;
 	struct gc2n64_adapter_info inf;
+	const char *signature = "41d938a8-6f8a-11e5-a45e-001bfca3c593";
 
 	////////////////////
 	printf("step [1/7] : Load .hex file...\n");
@@ -450,7 +454,17 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 		goto err;
 	}
 
+	// look for the signature somewhere in the file to make sure
+	// this firmware is intended for this product
+	if (!memmem(buf, max_addr + 1, signature, strlen(signature))) {
+		fprintf(stderr, "Update aborted : Signature not found. This hex file is not for this adapter.\n");
+		ret = -1;
+		printHexBuf(buf + 0x1bde, 30);
+		goto err;
+	}
+
 	printf("Firmware size: %d bytes\n", max_addr+1);
+
 
 	////////////////////
 	printf("step [2/7] : Get adapter info...\n");
@@ -464,18 +478,27 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	if (inf.in_bootloader) {
 		printf("step [3/7] : Enter bootloader... Skipped. Already in bootloader.\n");
 	} else {
+		// Catch Atmega8 adapters programmed with a new firmware but without bootloader.
+		if (!inf.app.upgradeable) {
+			fprintf(stderr, "Error : This adapter is not upgradable. (i.e. No bootloader on Atmega8)\n");
+			ret = -1;
+			goto err;
+		}
+
 		printf("step [3/7] : Enter bootloader...\n");
 		res = gc2n64_adapter_enterBootloader(hdl, channel);
 		if (res < 0) {
 			fprintf(stderr, "Failed to enter the bootloader\n");
-			return -1;
+			ret = -1;
+			goto err;
 		}
 
 		// Re-read the info structure, as we will need the bootloader start address.
 		res = gc2n64_adapter_getInfo(hdl, channel, &inf);
 		if (res < 0) {
 			fprintf(stderr, "Failed to read info after enterring bootloader\n");
-			return -1;
+			ret = -1;
+			goto err;
 		}
 	}
 
@@ -484,35 +507,27 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	gc2n64_adapter_boot_eraseAll(hdl, channel);
 
 	if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	printf("Ok\n");
 
-	////////////////////
-	// We need to add a marker at the end of the application area (just before the
-	// bootloader) so the bootloader knows an application is installed.
-	if (max_addr >= inf.bootldr.bootloader_start_address - 4) {
-		fprintf(stderr, "No space for marker - application too large. Aborting\n");
-		return -1;
-	}
-	buf[inf.bootldr.bootloader_start_address - 4] = 0x12;
-	buf[inf.bootldr.bootloader_start_address - 3] = 0x34;
-	buf[inf.bootldr.bootloader_start_address - 2] = 0x56;
-	buf[inf.bootldr.bootloader_start_address - 1] = 0x78;
 
 	printf("step [5/7] : Write new firmware...\n");
 	// Note: We write up to the bootloader, even if the firmware was shorter (it usually is).
 	// This is to make sure that the marker we placed at the end gets written.
 	res = gc2n64_adapter_sendFirmwareBlocks(hdl, channel, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	printf("step [6/7] : Verify firmware...\n");
 	res = gc2n64_adapter_verifyFirmware(hdl, channel, buf, inf.bootldr.bootloader_start_address);
 	if (res < 0) {
 		printf("Verify failed : Update failed\n");
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	printf("step [7/7] : Launch new firmware.\n");
