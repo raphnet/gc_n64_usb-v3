@@ -24,6 +24,7 @@ int load_ihex(const char *file, unsigned char *dstbuf, int bufsize)
 	int line = 0;
 	int eof_seen = 0;
 	unsigned int max_address = 0;
+	unsigned int offset = 0;
 
 	fptr = fopen(file, "r");
 	if (!fptr) {
@@ -93,27 +94,39 @@ int load_ihex(const char *file, unsigned char *dstbuf, int bufsize)
 			switch(databuf[3])
 			{
 				case 0x00: // Data
-					if (address + data_count > bufsize) {
+					if (address + offset + data_count > bufsize) {
 						fprintf(stderr, "hex file too large\n");
 						ret = -6;
 						goto err;
 					}
-					if (address + data_count > max_address) {
-						max_address = address + data_count;
+					if (address + offset + data_count > max_address) {
+						max_address = address + offset + data_count;
 					}
-					memcpy(dstbuf + address, databuf + 4, data_count);
+					memcpy(dstbuf + address + offset, databuf + 4, data_count);
 					break;
 
 				case 0x01: // EOF
 					eof_seen = 1;
 					break;
 
+				case 0x04: // Extended linear address
+					if (data_count != 2) {
+						fprintf(stderr, "ihex parser: Malformatted 0x04 record at line %d\n", line);
+						ret = -8;
+						goto err;
+					}
+					offset = (databuf[4] << 24) | (databuf[5] << 16);
+					//printf("OFfset: 0x%08x\n", offset);
+					break;
+
+				case 0x03: // Start segment address
+				case 0x05: // Start linear address
+					// Ignored
+					break;
+
 				default:
 				case 0x02: // Extended segment address
-				case 0x03: // Start segment address
-				case 0x04: // Extended linear address
-				case 0x05: // Start linear address
-					fprintf(stderr, "ihex parser: Unimplemented record type 0x%02x\n", databuf[3]);
+					fprintf(stderr, "ihex parser: Unimplemented record type 0x%02x at line %d\n", databuf[3], line);
 					ret = -2;
 					goto err;
 			}
