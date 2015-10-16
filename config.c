@@ -69,31 +69,35 @@ unsigned char config_setParam(unsigned char param, const unsigned char *value)
 	{
 		case CFG_PARAM_MODE:
 			g_eeprom_data.cfg.mode = value[0];
-			return 1;
+			break;
 		case CFG_PARAM_SERIAL:
 			config_set_serial((char*)value);
-			return 1;
+			break;
 		case CFG_PARAM_POLL_INTERVAL0:
 			g_eeprom_data.cfg.poll_interval[0] = value[0];
-			return 1;
+			break;
 #if NUM_CHANNELS > 1
 		case CFG_PARAM_POLL_INTERVAL1:
 			g_eeprom_data.cfg.poll_interval[1] = value[0];
-			return 1;
+			break;
 #endif
 #if NUM_CHANNELS > 2
 		case CFG_PARAM_POLL_INTERVAL2:
 			g_eeprom_data.cfg.poll_interval[2] = value[0];
-			return 1;
+			break;
 #endif
 #if NUM_CHANNELS > 3
 		case CFG_PARAM_POLL_INTERVAL3:
 			g_eeprom_data.cfg.poll_interval[3] = value[0];
-			return 1;
+			break;
 #endif
+		default:
+			return 0;
 	}
 
-	return 0;
+	eeprom_commit();
+
+	return 1;
 }
 
 
