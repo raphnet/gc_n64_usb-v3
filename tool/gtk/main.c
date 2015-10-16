@@ -5,8 +5,8 @@
 #include "../gcn64lib.h"
 #include "../../requests.h"
 
-#define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = (TYPE *) \
-                                            gtk_builder_get_object(app->builder, #ELEMENT);
+#define GET_ELEMENT(TYPE, ELEMENT)	(TYPE *)gtk_builder_get_object(app->builder, #ELEMENT)
+#define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = GET_ELEMENT(TYPE, ELEMENT)
 
 struct application {
 	GtkBuilder *builder;
@@ -50,11 +50,11 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 		unsigned char cfg_param;
 		GtkCheckButton *chkbtn;
 	} configurable_bits[] = {
-		{ CFG_PARAM_N64_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
-		{ CFG_PARAM_GC_MAIN_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
-		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
-		{ CFG_PARAM_FULL_SLIDERS, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_full_sliders) },
-		{ CFG_PARAM_INVERT_TRIG, GET_UI_ELEMENT(GtkCheckButton, chkbtn_gc_invert_trig) },
+		{ CFG_PARAM_N64_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
+		{ CFG_PARAM_GC_MAIN_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
+		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
+		{ CFG_PARAM_FULL_SLIDERS, GET_ELEMENT(GtkCheckButton, chkbtn_gc_full_sliders) },
+		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkCheckButton, chkbtn_gc_invert_trig) },
 		{ },
 	};
 	int i;
@@ -62,7 +62,7 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 
 	for (i=0; configurable_bits[i].chkbtn; i++) {
 		buf = gtk_toggle_button_get_active(configurable_bits[i].chkbtn);
-		gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i], &buf, 1);
+		gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, &buf, 1);
 	}
 }
 
