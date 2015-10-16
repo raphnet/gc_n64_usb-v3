@@ -8,6 +8,10 @@
 #include "ihex.h"
 #include "delay.h"
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int channel, int verbose)
 {
 	unsigned char cmd[30];
@@ -37,61 +41,359 @@ int gc2n64_adapter_echotest(gcn64_hdl_t hdl, int channel, int verbose)
 	return (n!= sizeof(buf)) || memcmp(cmd, buf, sizeof(buf));
 }
 
-int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int channel, int id)
+int gc2n64_adapter_storeCurrentMapping(gcn64_hdl_t hdl, int channel, int dst_slot)
+{
+	int n;
+	unsigned char cmd[3];
+
+	cmd[0] = 'R';
+	cmd[1] = 0x04; // Save current mapping
+	cmd[2] = dst_slot;
+
+	n = gcn64lib_rawSiCommand(hdl, channel, cmd, sizeof(cmd), cmd, 1);
+	if (n<0) {
+		return n;
+	}
+	if (n != 1) {
+		fprintf(stderr, "Communication error while storing mapping\n");
+		return -1;
+	}
+
+	if (cmd[0] == 0x00) {
+		return gc2n64_adapter_waitNotBusy(hdl, channel, 0);
+	}
+	else {
+		fprintf(stderr, "storeCurrentMapping: Command NACKed\n");
+		return -1;
+	}
+}
+
+int gc2n64_adapter_setMapping(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_mapping *mapping)
+{
+	unsigned char buf[64];
+	unsigned char mapdata[64];
+	int i, n;
+	int maplen, togo, done, chunk;
+
+
+	maplen = mapping->n_pairs * 2;
+
+	if (maplen > sizeof(mapdata)) {
+		fprintf(stderr, "Mapping too large\n");
+		return -1;
+	}
+
+	for (i=0; i<mapping->n_pairs; i++) {
+		mapdata[i*2] = mapping->pairs[i].gc;
+		mapdata[i*2 + 1] = mapping->pairs[i].n64;
+	}
+
+	printf("Map data : ");
+	printHexBuf(mapdata, maplen);
+
+	togo = maplen;
+	done = 0;
+	chunk = 0;
+	while (togo) {
+		int len;
+
+		if (togo > 32) {
+			len = 32;
+		} else {
+			len = togo;
+		}
+
+		buf[0] = 'R';
+		buf[1] = 0x03; // set mapping
+		buf[2] = chunk;
+		memcpy(buf + 3, mapdata + done, len);
+		done+= len;
+
+//		printf("Mapping chunk : ");
+//		printHexBuf(buf, len + 2);
+
+		n = gcn64lib_rawSiCommand(hdl, channel, buf, len + 3, buf, 1);
+		if (n<0) {
+			return n;
+		}
+		if (n != 1) {
+			fprintf(stderr, "Communication error setting mapping\n");
+			return -1;
+		}
+
+		togo -= len;
+		chunk++;
+	}
+
+	return 0;
+}
+
+int gc2n64_adapter_getMapping(gcn64_hdl_t hdl, int channel, int mapping_id, struct gc2n64_adapter_mapping *dst_mapping)
 {
 	unsigned char buf[64];
 	unsigned char cmd[4];
 	int n;
 	int mapping_size;
+	int togo;
 
 	cmd[0] = 'R';
 	cmd[1] = 0x02; // Get mapping
-	cmd[2] = id;
+	cmd[2] = mapping_id;
 	cmd[3] = 0; // chunk 0 (size)
 
-	n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf, 4);
+	n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf, 1);
 	if (n<0)
 		return n;
 
 	if (n == 1) {
 		int i, pos;
 		mapping_size = buf[0];
-		printf("Mapping %d size: %d\n", id, mapping_size);
+//		printf("Mapping %d size: %d\n", mapping_id, mapping_size);
 
+		togo = mapping_size;
 		for (pos=0, i=0; pos<mapping_size; i++) {
 			cmd[0] = 'R';
 			cmd[1] = 0x02; // Get mapping
-			cmd[2] = id;
+			cmd[2] = mapping_id;
 			cmd[3] = i+1; // chunk 1 is first 32 byte block, 2nd is next 32 bytes, etc
-			printf("Getting block %d\n", i+1);
-			n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf + pos, 32);
+//			printf("Getting block %d\n", i+1);
+			n = gcn64lib_rawSiCommand(hdl, channel, cmd, 4, buf + pos, togo > 32 ? 32 : togo);
 			if (n<0) {
 				return n;
 			}
-			printf("ret: %d\n", n);
+//			printf("ret: %d\n", n);
 			if (n==0)
 				break;
 			pos += n;
+			togo -= n;
 		}
 
-		printf("Received %d bytes\n", pos);
-		printHexBuf(buf, pos);
+		//printf("Received %d bytes\n", pos);
+		if (n%2) {
+			fprintf(stderr, "Error: Odd length mapping received\n");
+			printHexBuf(buf, pos);
+			return -1;
+		}
+
+		// TODO : Decode this to dst_mapping
+		dst_mapping->n_pairs = pos/2;
+		for (i=0; i<dst_mapping->n_pairs; i++) {
+			dst_mapping->pairs[i].gc = buf[i*2];
+			dst_mapping->pairs[i].n64 = buf[i*2+1];
+		}
 	}
 
 	return 0;
 }
 
+const char *gc2n64_adapter_getMappingSlotName(unsigned char id, int default_context)
+{
+	switch (id)
+	{
+		case MAPPING_SLOT_BUILTIN_CURRENT:
+			if (default_context) {
+				return "[Built-in default]";
+			} else {
+				return "[Current mapping]";
+			}
+		case MAPPING_SLOT_DPAD_UP: return "[D-Pad UP]";
+		case MAPPING_SLOT_DPAD_DOWN: return "[D-Pad DOWN]";
+		case MAPPING_SLOT_DPAD_LEFT: return "[D-Pad LEFT]";
+		case MAPPING_SLOT_DPAD_RIGHT: return "[D-Pad RIGHT]";
+	}
+	return "Invalid ID";
+}
+
+const char *gc2n64_adapter_getGCname(unsigned char id)
+{
+	const char *names[] = {
+		"A","B","Z","Start",
+		"L","R",
+		"C-stick up (50% threshold)",
+		"C-stick down (50% threshold)",
+		"C-stick left (50% threshold)",
+		"C-stick right (50% threshold)",
+		"Dpad-up","Dpad-down","Dpad-left","Dpad-right",
+		"Joystick left-right axis","Joystick up-down axis",
+		// Extras
+		"X","Y",
+		"Joystick up (50% threshold)", "Joystick down (50% threshold)",
+		"Joystick left (50% threshold)", "Joystick right (50% threshold)",
+		"Analogic L slider (50% threshold)",
+		"Analogic R slider (50% threshold)",
+		"C-stick left-right axis","C-stick up-down axis",
+	};
+
+	if (id == 0xff)
+		return "None";
+
+	if (id < 0 || id >= ARRAY_SIZE(names)) {
+		return "Error";
+	}
+	return names[id];
+}
+
+const char *gc2n64_adapter_getN64name(unsigned char id)
+{
+	const char *names[] = {
+		"A","B","Z","Start","L","R",
+		"C-up","C-down","C-left","C-right",
+		"Dpad-up","Dpad-down","Dpad-left","Dpad-right",
+		"Joystick left-right axis","Joystick up-down axis",
+		"Joystick up", "Joystick down",
+		"Joystick left", "Joystick right",
+		"None"
+	};
+
+	if (id == 0xff)
+		return "None";
+
+	if (id < 0 || id >= ARRAY_SIZE(names)) {
+		return "Error";
+	}
+	return names[id];
+}
+
+struct gc2n64_adapter_mapping *gc2n64_adapter_loadMapping(const char *srcfile)
+{
+	FILE *fptr;
+	struct gc2n64_adapter_mapping *map = NULL;;
+	char linebuf[64];
+	int line = 0, pair = 0;
+
+	fptr = fopen(srcfile, "r");
+	if (!fptr) {
+		perror("fopen");
+		return NULL;
+	}
+
+	map = malloc(sizeof(struct gc2n64_adapter_mapping));
+	if (!map) {
+		perror("malloc");
+		goto err;
+	}
+
+	do {
+		if (fgets(linebuf, sizeof(linebuf), fptr)) {
+			int gc, n64, n;
+			line++;
+
+			if (line == 1) {
+				const char *magic = "# gc2n64 mapping";
+				if (strncmp(magic, linebuf, strlen(magic))) {
+					fprintf(stderr, "Does not appear to be a valid mapping file\n");
+					goto err;
+				}
+				continue;
+			}
+
+			n = sscanf(linebuf, "%03d;%03d", &gc, &n64);
+			if (n != 2) {
+	//			printf("Ignoring line %d\n", line);
+			} else {
+	//			printf("%d -> %d\n", gc, n64);
+				map->pairs[pair].gc = gc;
+				map->pairs[pair].n64 = n64;
+
+				pair++;
+				if (pair >= GC2N64_MAX_MAPPING_PAIRS) {
+					fprintf(stderr, "too many pairs, cannot load mapping.\n");
+					goto err;
+				}
+			}
+		}
+	} while (!feof(fptr));
+
+	map->n_pairs = pair;
+
+	fclose(fptr);
+	return map;
+
+err:
+	if (map) {
+		free(map);
+	}
+	fclose(fptr);
+	return NULL;
+}
+
+int gc2n64_adapter_saveMapping(struct gc2n64_adapter_mapping *map, const char *dstfile)
+{
+	FILE *fptr;
+	int i;
+
+	fptr = fopen(dstfile, "w");
+	if (!fptr) {
+		perror("fopen");
+		return -1;
+	}
+
+	fprintf(fptr, "# gc2n64 mapping\n");
+	for (i=0; i<map->n_pairs; i++) {
+		fprintf(fptr, "%03d;%03d # %s -> %s\n",
+			map->pairs[i].gc, map->pairs[i].n64,
+				gc2n64_adapter_getGCname(map->pairs[i].gc),
+					gc2n64_adapter_getN64name(map->pairs[i].n64));
+	}
+	fflush(fptr);
+	fclose(fptr);
+
+	return 0;
+}
+
+void gc2n64_adapter_printMapping(struct gc2n64_adapter_mapping *map)
+{
+	int i;
+	int is_default;
+
+	for (i=0; i<map->n_pairs; i++) {
+		// Do not display the terminator
+		if (map->pairs[i].gc == 0xff || map->pairs[i].n64 == 0xff) {
+			break;
+		}
+
+		/* 0 .. 15 is a 1:1 (same button name) mapping by default */
+		if (map->pairs[i].gc < 16) {
+			if (map->pairs[i].gc == map->pairs[i].n64) {
+				is_default = 1;
+			}
+			else {
+				is_default = 0;
+			}
+		}
+		else {
+			// 16 and above maps to NONE by default
+			if (map->pairs[i].n64 == 20) {
+				is_default = 1;
+			} else {
+				is_default = 0;
+			}
+		}
+
+		if (!is_default) {
+			printf("%s -> %s, ", gc2n64_adapter_getGCname(map->pairs[i].gc),
+											gc2n64_adapter_getN64name(map->pairs[i].n64));
+		}
+	}
+}
 
 void gc2n64_adapter_printInfo(struct gc2n64_adapter_info *inf)
 {
+	int i;
+
 	if (!inf->in_bootloader) {
 		printf("gc_to_n64 adapter info: {\n");
 
-		printf("\tDefault mapping id: %d\n", inf->app.default_mapping_id);
+		printf("\tDefault mapping id: %d (%s)\n", inf->app.default_mapping_id, gc2n64_adapter_getMappingSlotName(inf->app.default_mapping_id, 1) );
 		printf("\tDeadzone enabled: %d\n", inf->app.deadzone_enabled);
 		printf("\tOld v1.5 conversion: %d\n", inf->app.old_v1_5_conversion);
 		printf("\tFirmware version: %s\n", inf->app.version);
 		printf("\tUpgradable: %s\n", inf->app.upgradeable ? "Yes":"No (Atmega8)");
+		for (i=0; i<GC2N64_NUM_MAPPINGS; i++) {
+			printf("\tMapping %d (%-13s): { ", i, gc2n64_adapter_getMappingSlotName(i, 0));
+			gc2n64_adapter_printMapping(&inf->app.mappings[i]);
+			printf(" }\n");
+		}
 	} else {
 		printf("gc_to_n64 adapter in bootloader mode: {\n");
 
@@ -139,6 +441,10 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_i
 			strncpy(inf->bootldr.version, (char*)buf+10, sizeof(inf->bootldr.version)-1);
 		}
 
+		for (n=0; n<GC2N64_NUM_MAPPINGS; n++) {
+			gc2n64_adapter_getMapping(hdl, channel, n, &inf->app.mappings[n]);
+		}
+
 	} else {
 		printf("No answer (old version?)\n");
 		return -1;
@@ -147,7 +453,7 @@ int gc2n64_adapter_getInfo(gcn64_hdl_t hdl, int channel, struct gc2n64_adapter_i
 	return 0;
 }
 
-int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl, int channel)
+int gc2n64_adapter_isBusy(gcn64_hdl_t hdl, int channel)
 {
 	unsigned char buf[64];
 	int n;
@@ -170,13 +476,13 @@ int gc2n64_adapter_boot_isBusy(gcn64_hdl_t hdl, int channel)
 	return 0; // Idle
 }
 
-int gc2n64_adapter_boot_waitNotBusy(gcn64_hdl_t hdl, int channel, int verbose)
+int gc2n64_adapter_waitNotBusy(gcn64_hdl_t hdl, int channel, int verbose)
 {
 	char spinner[4] = { '|','/','-','\\' };
 	int busy, no_reply_count=0;
 	int c=0;
 
-	while ((busy = gc2n64_adapter_boot_isBusy(hdl, channel)))
+	while ((busy = gc2n64_adapter_isBusy(hdl, channel)))
 	{
 		if (busy < 0) {
 			return -1;
@@ -376,7 +682,7 @@ int gc2n64_adapter_sendFirmwareBlocks(gcn64_hdl_t hdl, int channel, unsigned cha
 		}
 
 		if (buf[1]) {
-			if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
+			if (gc2n64_adapter_waitNotBusy(hdl, channel, 1)) {
 				fprintf(stderr, "Error waiting not busy\n");
 				return -1;
 			}
@@ -506,7 +812,7 @@ int gc2n64_adapter_updateFirmware(gcn64_hdl_t hdl, int channel, const char *hexf
 	printf("step [4/7] : Erase current firmware... "); fflush(stdout);
 	gc2n64_adapter_boot_eraseAll(hdl, channel);
 
-	if (gc2n64_adapter_boot_waitNotBusy(hdl, channel, 1)) {
+	if (gc2n64_adapter_waitNotBusy(hdl, channel, 1)) {
 		ret = -1;
 		goto err;
 	}
