@@ -198,6 +198,7 @@ struct usb_parameters {
 	struct usb_hid_parameters hid_params[MAX_HID_INTERFACES];
 };
 
+char usb_interruptReady(void);
 void usb_interruptSend(void *data, int len); // EP1
 void usb_init(const struct usb_parameters *params);
 void usb_doTasks(void);

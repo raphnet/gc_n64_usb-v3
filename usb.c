@@ -604,6 +604,11 @@ ISR(USB_COM_vect)
 #endif
 }
 
+char usb_interruptReady(void)
+{
+	return interrupt_data_len == -1;
+}
+
 void usb_interruptSend(void *data, int len)
 {
 	uint8_t sreg = SREG;
