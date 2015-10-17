@@ -231,6 +231,7 @@ Gamepad *detectPad(void)
 	return NULL;
 }
 
+/* Called after eeprom content is loaded. */
 void eeprom_app_ready(void)
 {
 	static wchar_t serial_from_eeprom[SERIAL_NUM_LEN+1];
@@ -253,11 +254,17 @@ void pollDelay(void)
 	}
 }
 
+#define STATE_WAIT_POLLTIME			0
+#define STATE_POLL_PAD				1
+#define STATE_WAIT_INTERRUPT_READY	2
+#define STATE_TRANSMIT				3
+
 int main(void)
 {
 	Gamepad *pad = NULL;
 	gamepad_data pad_data;
 	unsigned char gamepad_vibrate = 0;
+	unsigned char state = STATE_WAIT_POLLTIME;
 
 	hwinit();
 	usart1_init();
@@ -273,21 +280,49 @@ int main(void)
 	{
 		static char last_v = 0;
 
-		/* Try to auto-detect controller if none*/
-		if (!pad) {
-			pad = detectPad();
-		}
-
 		usb_doTasks();
-
-		// Todo : The _delay_ms used to poll the controller at
-		// a fixed interval is slowing down the frequency of
-		// hiddata_doTask calls. Rework this code to use a timer
-		// for polling the controller...
 		hiddata_doTask();
 
-		if (!g_polling_suspended) {
-			pollDelay();
+		switch(state)
+		{
+			case STATE_WAIT_POLLTIME:
+				if (!g_polling_suspended) {
+					pollDelay();
+					state = STATE_POLL_PAD;
+				}
+				break;
+
+			case STATE_POLL_PAD:
+				/* Try to auto-detect controller if none*/
+				if (!pad) {
+					pad = detectPad();
+				}
+				if (pad) {
+					pad->update();
+
+					if (pad->changed()) {
+
+						pad->getReport(&pad_data);
+						usbpad_update(&pad_data);
+						state = STATE_WAIT_INTERRUPT_READY;
+					}
+				} else {
+					/* Just make sure the gamepad state holds valid data
+					 * to appear inactive (no buttons and axes in neutral) */
+					usbpad_update(NULL);
+				}
+				break;
+
+			case STATE_WAIT_INTERRUPT_READY:
+				if (usb_interruptReady()) {
+					state = STATE_TRANSMIT;
+				}
+				break;
+
+			case STATE_TRANSMIT:
+				usb_interruptSend(usbpad_getReportBuffer(), usbpad_getReportSize());
+				state = STATE_WAIT_POLLTIME;
+				break;
 		}
 
 		gamepad_vibrate = usbpad_mustVibrate();
@@ -296,22 +331,6 @@ int main(void)
 				pad->setVibration(gamepad_vibrate);
 			}
 			last_v = gamepad_vibrate;
-		}
-
-		if (pad && !g_polling_suspended) {
-			pad->update();
-
-			if (pad->changed()) {
-
-				pad->getReport(&pad_data);
-				usbpad_update(&pad_data);
-
-				usb_interruptSend(usbpad_getReportBuffer(), usbpad_getReportSize());
-			}
-		} else {
-			/* Just make sure the gamepad state holds valid data
-			 * to appear inactive (no buttons and axes in neutral) */
-			usbpad_update(NULL);
 		}
 	}
 
