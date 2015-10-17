@@ -18,6 +18,7 @@
 #include "eeprom.h"
 #include "hiddata.h"
 #include "usbstrings.h"
+#include "intervaltimer.h"
 
 /* Those .c files are included rather than linked for we
  * want the sizeof() operator to work on the arrays */
@@ -269,6 +270,7 @@ int main(void)
 	hwinit();
 	usart1_init();
 	eeprom_init();
+	intervaltimer_init();
 
 	/* Init the buffer with idle data */
 	usbpad_update(NULL);
@@ -287,8 +289,10 @@ int main(void)
 		{
 			case STATE_WAIT_POLLTIME:
 				if (!g_polling_suspended) {
-					pollDelay();
-					state = STATE_POLL_PAD;
+					intervaltimer_set(g_eeprom_data.cfg.poll_interval[0]);
+					if (intervaltimer_get()) {
+						state = STATE_POLL_PAD;
+					}
 				}
 				break;
 
