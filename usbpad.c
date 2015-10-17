@@ -102,10 +102,10 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[R
 
 	/* Scale -100 ... + 1000 to -16000 ... +16000 */
 	xval *= 160;
-	yval *= 160;
+	yval *= -160;
 	// TODO : Is C-stick different?
 	cxval *= 160;
-	cyval *= 160;
+	cyval *= -160;
 
 	/* Scane 0...255 to 0...16000 */
 	ltrig *= 63;
