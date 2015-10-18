@@ -12,6 +12,7 @@ struct gcn64_info {
 	wchar_t str_prodname[PRODNAME_MAXCHARS];
 	wchar_t str_serial[SERIAL_MAXCHARS];
 	char str_path[PATH_MAXCHARS];
+	int usb_vid, usb_pid;
 	int major, minor;
 	int access; // True unless direct access to read serial/prodname failed due to permissions.
 };

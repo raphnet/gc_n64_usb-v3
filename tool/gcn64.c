@@ -106,6 +106,8 @@ struct gcn64_info *gcn64_listDevices(struct gcn64_info *info, struct gcn64_list_
 		}
 		if (isProductIdHandled(ctx->cur_dev->product_id, ctx->cur_dev->interface_number))
 		{
+				info->usb_vid = ctx->cur_dev->vendor_id;
+				info->usb_pid = ctx->cur_dev->product_id;
 				wcsncpy(info->str_prodname, ctx->cur_dev->product_string, PRODNAME_MAXCHARS-1);
 				wcsncpy(info->str_serial, ctx->cur_dev->serial_number, SERIAL_MAXCHARS-1);
 				strncpy(info->str_path, ctx->cur_dev->path, PATH_MAXCHARS-1);
