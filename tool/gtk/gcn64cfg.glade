@@ -293,6 +293,8 @@
                           <object class="GtkLabel" id="label_product_name">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="hexpand">True</property>
+                            <property name="angle">0.059999998658895493</property>
                           </object>
                           <packing>
                             <property name="left_attach">1</property>
@@ -360,7 +362,6 @@
                             <child>
                               <object class="GtkCheckButton" id="chkbtn_n64_square">
                                 <property name="label" translatable="yes">N64 Square joystick</property>
-                                <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">False</property>
                                 <property name="xalign">0</property>
@@ -376,7 +377,6 @@
                             <child>
                               <object class="GtkCheckButton" id="chkbtn_gc_main_square">
                                 <property name="label" translatable="yes">GC Square main stick</property>
-                                <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">False</property>
                                 <property name="xalign">0</property>
@@ -392,7 +392,6 @@
                             <child>
                               <object class="GtkCheckButton" id="chkbtn_gc_cstick_square">
                                 <property name="label" translatable="yes">GC Square C-stick</property>
-                                <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">False</property>
                                 <property name="xalign">0</property>
@@ -423,7 +422,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="chkbtn_invert_trig">
+                              <object class="GtkCheckButton" id="chkbtn_gc_invert_trig">
                                 <property name="label" translatable="yes">GC Inverted triggers</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>

@@ -13,10 +13,25 @@ struct application {
 	gcn64_hdl_t current_adapter_handle;
 };
 
-static void updateGuiFromAdapter(struct application *app)
+static void updateGuiFromAdapter(struct application *app, struct gcn64_info *info)
 {
 	unsigned char buf[32];
 	int n;
+	struct {
+		unsigned char cfg_param;
+		GtkToggleButton *chkbtn;
+	} configurable_bits[] = {
+//		{ CFG_PARAM_N64_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
+//		{ CFG_PARAM_GC_MAIN_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
+//		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
+		{ CFG_PARAM_FULL_SLIDERS, GET_ELEMENT(GtkToggleButton, chkbtn_gc_full_sliders) },
+		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkToggleButton, chkbtn_gc_invert_trig) },
+		{ },
+	};
+	GET_UI_ELEMENT(GtkLabel, label_product_name);
+	GET_UI_ELEMENT(GtkLabel, label_firmware_version);
+	GET_UI_ELEMENT(GtkLabel, label_usb_id);
+	int i;
 
 	GtkSpinButton *pollInterval0 = GTK_SPIN_BUTTON( gtk_builder_get_object(app->builder, "pollInterval0") );
 
@@ -25,6 +40,20 @@ static void updateGuiFromAdapter(struct application *app)
 		printf("poll interval: %d\n", buf[0]);
 		gtk_spin_button_set_value(pollInterval0, (gdouble)buf[0]);
 	}
+
+	for (i=0; configurable_bits[i].chkbtn; i++) {
+		gcn64lib_getConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, buf, sizeof(buf));
+		printf("config param %02x is %d\n",  configurable_bits[i].cfg_param, buf[0]);
+		gtk_toggle_button_set_active(configurable_bits[i].chkbtn, buf[0]);
+	}
+
+	gtk_label_set_text(label_product_name, g_ucs4_to_utf8((void*)info->str_prodname, -1, NULL, NULL, NULL));
+
+	if (0 == gcn64lib_getVersion(app->current_adapter_handle, (char*)buf, sizeof(buf))) {
+		gtk_label_set_text(label_firmware_version, (char*)buf);
+
+	}
+
 }
 
 G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
@@ -48,13 +77,13 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 	struct application *app = data;
 	struct {
 		unsigned char cfg_param;
-		GtkCheckButton *chkbtn;
+		GtkToggleButton *chkbtn;
 	} configurable_bits[] = {
-		{ CFG_PARAM_N64_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
-		{ CFG_PARAM_GC_MAIN_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
-		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
-		{ CFG_PARAM_FULL_SLIDERS, GET_ELEMENT(GtkCheckButton, chkbtn_gc_full_sliders) },
-		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkCheckButton, chkbtn_gc_invert_trig) },
+//		{ CFG_PARAM_N64_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_n64_square) },
+//		{ CFG_PARAM_GC_MAIN_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_main_square) },
+//		{ CFG_PARAM_GC_CSTICK_SQUARE, GET_ELEMENT(GtkCheckButton, chkbtn_gc_cstick_square) },
+		{ CFG_PARAM_FULL_SLIDERS, GET_ELEMENT(GtkToggleButton, chkbtn_gc_full_sliders) },
+		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkToggleButton, chkbtn_gc_invert_trig) },
 		{ },
 	};
 	int i;
@@ -63,6 +92,7 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 	for (i=0; configurable_bits[i].chkbtn; i++) {
 		buf = gtk_toggle_button_get_active(configurable_bits[i].chkbtn);
 		gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, &buf, 1);
+		printf("cfg param %02x now set to %d\n", configurable_bits[i].cfg_param, buf);
 	}
 }
 
@@ -104,7 +134,6 @@ G_MODULE_EXPORT void onMainWindowShow(GtkWidget *win, gpointer data)
 							3, g_memdup(&info, sizeof(struct gcn64_info)),
 								-1);
 		}
-//		gtk_list_store_set(list_store, &iter, 1, "asfasdfasdfasf", -1);
 	}
 
 	gcn64_freeListCtx(listctx);
@@ -133,7 +162,7 @@ G_MODULE_EXPORT void adapterSelected(GtkComboBox *cb, gpointer data)
 			printf("Access error!\n");
 		}
 
-		updateGuiFromAdapter(app);
+		updateGuiFromAdapter(app, info);
 		gtk_widget_set_sensitive(adapter_details, TRUE);
 	}
 }
