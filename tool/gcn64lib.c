@@ -56,6 +56,29 @@ int gcn64lib_suspendPolling(gcn64_hdl_t hdl, unsigned char suspend)
 	return 0;
 }
 
+int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax)
+{
+	unsigned char cmd[64];
+	int n;
+
+	if (dstmax <= 0)
+		return -1;
+
+	cmd[0] = RQ_GCN64_GET_VERSION;
+
+	n = gcn64_exchange(hdl, cmd, 2, cmd, sizeof(cmd));
+	if (n<0)
+		return n;
+
+	dst[0] = 0;
+	if (n > 1) {
+		strncpy(dst, (char*)cmd+1, n);
+	}
+	dst[dstmax-1] = 0;
+
+	return 0;
+}
+
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx)
 {
 	unsigned char cmd[3 + tx_len];

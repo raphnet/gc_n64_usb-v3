@@ -48,6 +48,7 @@ static void printUsage(void)
 	printf("      --nonstop         Continue testing forever or until an error occurs.\n");
 	printf("\n");
 	printf("Configuration commands:\n");
+	printf("  --get_version                      Read adapter firmware version\n");
 	printf("  --set_serial serial                Assign a new device serial number\n");
 	printf("  --get_serial                       Read serial from eeprom\n");
 	printf("  --set_poll_rate ms                 Set time between controller polls in milliseconds\n");
@@ -112,6 +113,7 @@ static void printUsage(void)
 #define OPT_GC_TO_N64_READ_MAPPING		320
 #define OPT_GC_TO_N64_LOAD_MAPPING		321
 #define OPT_GC_TO_N64_STORE_CURRENT_MAPPING	322
+#define OPT_GET_VERSION				323
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -144,6 +146,7 @@ struct option longopts[] = {
 	{ "gc_to_n64_load_mapping", 1, NULL, OPT_GC_TO_N64_LOAD_MAPPING },
 	{ "gc_to_n64_store_current_mapping", 1, NULL, OPT_GC_TO_N64_STORE_CURRENT_MAPPING },
 	{ "nonstop", 0, NULL, OPT_NONSTOP },
+	{ "get_version", 0, NULL, OPT_GET_VERSION },
 	{ },
 };
 
@@ -484,6 +487,16 @@ int main(int argc, char **argv)
 						printf("Stored mapping to slot %d (%s)\n", slot, gc2n64_adapter_getMappingSlotName(slot, 0));
 					} else {
 						printf("Error storing mapping\n");
+					}
+				}
+				break;
+
+			case OPT_GET_VERSION:
+				{
+					char version[64];
+
+					if (0 == gcn64lib_getVersion(hdl, version, sizeof(version))) {
+						printf("Firmware version: %s\n", version);
 					}
 				}
 				break;
