@@ -2,14 +2,14 @@ CC=avr-gcc
 AS=$(CC)
 LD=$(CC)
 
+include Makefile.inc
+
 PROGNAME=n64
 OBJDIR=objs-$(PROGNAME)
 CPU=atmega32u2
-CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT
+CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT -DVERSIONSTR=$(VERSIONSTR)
 LDFLAGS=-mmcu=$(CPU) -Wl,-Map=$(PROGNAME).map
 HEXFILE=$(PROGNAME).hex
-
-include Makefile.inc
 
 all: $(HEXFILE)
 
