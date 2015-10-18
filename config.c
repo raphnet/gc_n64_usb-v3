@@ -55,6 +55,12 @@ unsigned char config_getParam(unsigned char param, unsigned char *value, unsigne
 			*value = g_eeprom_data.cfg.poll_interval[3];
 			return 1;
 #endif
+		case CFG_PARAM_INVERT_TRIG:
+			*value = (g_eeprom_data.cfg.flags & FLAG_GC_INVERT_TRIGS) ? 1 : 0;
+			return 1;
+		case CFG_PARAM_FULL_SLIDERS:
+			*value = (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) ? 1 : 0;
+			return 1;
 	}
 
 	return 0;
@@ -91,6 +97,20 @@ unsigned char config_setParam(unsigned char param, const unsigned char *value)
 			g_eeprom_data.cfg.poll_interval[3] = value[0];
 			break;
 #endif
+		case CFG_PARAM_FULL_SLIDERS:
+			if (value[0]) {
+				g_eeprom_data.cfg.flags |= FLAG_GC_FULL_SLIDERS;
+			} else {
+				g_eeprom_data.cfg.flags &= ~FLAG_GC_FULL_SLIDERS;
+			}
+			break;
+		case CFG_PARAM_INVERT_TRIG:
+			if (value[0]) {
+				g_eeprom_data.cfg.flags |= FLAG_GC_INVERT_TRIGS;
+			} else {
+				g_eeprom_data.cfg.flags &= ~FLAG_GC_INVERT_TRIGS;
+			}
+			break;
 		default:
 			return 0;
 	}

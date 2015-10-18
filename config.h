@@ -7,7 +7,11 @@ struct eeprom_cfg {
 	uint8_t serial[SERIAL_NUM_LEN];
 	uint8_t mode;
 	uint8_t poll_interval[NUM_CHANNELS];
+	uint32_t flags;
 };
+
+#define FLAG_GC_FULL_SLIDERS	1
+#define FLAG_GC_INVERT_TRIGS	2
 
 void eeprom_app_write_defaults(void);
 void eeprom_app_ready(void);
