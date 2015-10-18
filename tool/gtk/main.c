@@ -31,6 +31,7 @@ static void updateGuiFromAdapter(struct application *app, struct gcn64_info *inf
 	GET_UI_ELEMENT(GtkLabel, label_product_name);
 	GET_UI_ELEMENT(GtkLabel, label_firmware_version);
 	GET_UI_ELEMENT(GtkLabel, label_usb_id);
+	GET_UI_ELEMENT(GtkLabel, label_device_path);
 	int i;
 
 	GtkSpinButton *pollInterval0 = GTK_SPIN_BUTTON( gtk_builder_get_object(app->builder, "pollInterval0") );
@@ -54,6 +55,10 @@ static void updateGuiFromAdapter(struct application *app, struct gcn64_info *inf
 
 	}
 
+	snprintf((char*)buf, sizeof(buf), "%04x:%04x", info->usb_vid, info->usb_pid);
+	gtk_label_set_text(label_usb_id, (char*)buf);
+
+	gtk_label_set_text(label_device_path, info->str_path);
 }
 
 G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
