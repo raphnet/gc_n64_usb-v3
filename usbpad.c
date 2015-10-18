@@ -4,6 +4,8 @@
 #include "gamepads.h"
 #include "usbpad.h"
 #include "mappings.h"
+#include "eeprom.h"
+#include "config.h"
 
 #define REPORT_ID	1
 #define REPORT_SIZE	15
@@ -107,11 +109,26 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[R
 	cxval *= 160;
 	cyval *= -160;
 
-	/* Scane 0...255 to 0...16000 */
-	ltrig *= 63;
-	if (ltrig > 16000) ltrig=16000;
-	rtrig *= 63;
-	if (rtrig > 16000) rtrig=16000;
+	if (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) {
+		int16_t lts = (int16_t)ltrig - 127;
+		int16_t rts = (int16_t)rtrig - 127;
+		lts *= 126;
+		ltrig = lts;
+		rts *= 126;
+		rtrig = rts;
+
+	} else {
+		/* Scale 0...255 to 0...16000 */
+		ltrig *= 63;
+		if (ltrig > 16000) ltrig=16000;
+		rtrig *= 63;
+		if (rtrig > 16000) rtrig=16000;
+	}
+
+	if (g_eeprom_data.cfg.flags & FLAG_GC_INVERT_TRIGS) {
+		ltrig = -ltrig;
+		rtrig = -rtrig;
+	}
 
 	/* Unsign for HID report */
 	xval += 16000;

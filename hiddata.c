@@ -5,6 +5,7 @@
 #include "hiddata.h"
 #include "bootloader.h"
 #include "gcn64_protocol.h"
+#include "version.h"
 
 #define CMDBUF_SIZE	64
 
@@ -95,6 +96,12 @@ static void hiddata_processCommandBuffer(void)
 		case RQ_GCN64_SUSPEND_POLLING:
 			// CMD: RQ, PARAM
 			g_polling_suspended = cmdbuf[1];
+			break;
+		case RQ_GCN64_GET_VERSION:
+			// CMD: RQ
+			// Answer: RQ, version string
+			strcpy((char*)(cmdbuf + 1), g_version);
+			cmdbuf_len = 1 + strlen(g_version);
 			break;
 	}
 
