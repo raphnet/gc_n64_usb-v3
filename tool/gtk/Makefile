@@ -8,7 +8,7 @@ PREFIX=/usr/local
 
 PROG=gcn64ctl_gui
 
-OBJS=main.o ../gcn64.o ../mempak.o ../gcn64lib.o ../hexdump.o
+OBJS=main.o ../gcn64.o ../mempak.o ../gcn64lib.o ../hexdump.o ../ihex.o
 
 .PHONY : clean install
 

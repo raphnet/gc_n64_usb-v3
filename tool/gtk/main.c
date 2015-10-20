@@ -1,17 +1,149 @@
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <glib.h>
 #include <gtk/gtk.h>
 #include "../gcn64.h"
 #include "../gcn64lib.h"
 #include "../../requests.h"
+#include "../ihex.h"
 
 #define GET_ELEMENT(TYPE, ELEMENT)	(TYPE *)gtk_builder_get_object(app->builder, #ELEMENT)
 #define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = GET_ELEMENT(TYPE, ELEMENT)
 
 struct application {
 	GtkBuilder *builder;
+	GtkWindow *mainwindow;
 	gcn64_hdl_t current_adapter_handle;
 };
+
+G_MODULE_EXPORT void updatestart_btn_clicked_cb(GtkWidget *w, gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkProgressBar, updateProgress);
+	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
+	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
+	int i;
+
+	gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), FALSE);
+
+	for (i=0; i<100; i++) {
+		gtk_progress_bar_set_fraction(updateProgress, i/100.0);
+		usleep(50000);
+		gtk_main_iteration_do(FALSE);
+	}
+
+	gtk_dialog_response(firmware_update_dialog, GTK_RESPONSE_OK);
+}
+
+void infoPopop(struct application *app, const char *message)
+{
+	GtkWidget *dialog;
+
+	dialog = gtk_message_dialog_new(app->mainwindow,
+									GTK_DIALOG_DESTROY_WITH_PARENT,
+									GTK_MESSAGE_INFO,
+									GTK_BUTTONS_CLOSE,
+									message);
+
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+
+
+void errorPopop(struct application *app, const char *message)
+{
+	GtkWidget *dialog;
+
+	dialog = gtk_message_dialog_new(app->mainwindow,
+									GTK_DIALOG_DESTROY_WITH_PARENT,
+									GTK_MESSAGE_ERROR,
+									GTK_BUTTONS_CLOSE,
+									message);
+
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+
+#define IHEX_MAX_FILE_SIZE	0x20000
+char check_ihex_for_signature(const char *filename, const char *signature)
+{
+	unsigned char *buf;
+	int max_address;
+
+	buf = malloc(IHEX_MAX_FILE_SIZE);
+	if (!buf) {
+		perror("malloc");
+		return 0;
+	}
+
+	max_address= load_ihex(filename, buf, IHEX_MAX_FILE_SIZE);
+
+	if (max_address > 0) {
+		if (!memmem(buf, max_address + 1, signature, strlen(signature))) {
+			return 0;
+		}
+		return 1;
+	}
+
+	return 0;
+}
+
+G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
+{
+	struct application *app = data;
+	gint res;
+	GtkWidget *dialog;
+	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+	GET_UI_ELEMENT(GtkFileFilter, hexfilter);
+	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
+	GET_UI_ELEMENT(GtkLabel, lbl_firmware_filename);
+	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
+
+	dialog = gtk_file_chooser_dialog_new("Open .hex file",
+										app->mainwindow,
+										action,
+										"_Cancel",
+										GTK_RESPONSE_CANCEL,
+										"_Open",
+										GTK_RESPONSE_ACCEPT,
+										NULL);
+
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), hexfilter);
+
+	res = gtk_dialog_run (GTK_DIALOG(dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		char *filename, *basename;
+		GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+
+		filename = gtk_file_chooser_get_filename(chooser);
+		basename = g_path_get_basename(filename);
+
+		printf("File selected: %s\n", filename);
+
+		if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
+			errorPopop(app, "Signature not found - This file is invalid or not meant for this adapter");
+		}
+
+		/* Prepare the update dialog widgets... */
+		gtk_label_set_text(lbl_firmware_filename, basename);
+		gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), TRUE);
+
+		/* Run the dialog */
+		res = gtk_dialog_run(firmware_update_dialog);
+		gtk_widget_hide( GTK_WIDGET(firmware_update_dialog));
+
+		if (res == GTK_RESPONSE_OK) {
+			infoPopop(app, "Update succeeded.");
+		}
+
+		g_free(filename);
+		g_free(basename);
+	}
+
+	gtk_widget_destroy(dialog);
+}
 
 static void updateGuiFromAdapter(struct application *app, struct gcn64_info *info)
 {
@@ -197,7 +329,7 @@ int
 main( int    argc,
       char **argv )
 {
-    GtkWidget  *window;
+    GtkWindow  *window;
     GError     *error = NULL;
 	struct application app = { };
 
@@ -216,7 +348,8 @@ main( int    argc,
     }
 
     /* Get main window pointer from UI */
-    window = GTK_WIDGET( gtk_builder_get_object( app.builder, "mainWindow" ) );
+    window = GTK_WINDOW( gtk_builder_get_object( app.builder, "mainWindow" ) );
+	app.mainwindow = window;
 
     /* Connect signals */
     gtk_builder_connect_signals( app.builder, &app );
@@ -225,7 +358,7 @@ main( int    argc,
 //    g_object_unref( G_OBJECT( builder ) );
 
     /* Show window. All other widgets are automatically shown by GtkBuilder */
-    gtk_widget_show( window );
+    gtk_widget_show( GTK_WIDGET(window) );
 
     /* Start main loop */
     gtk_main();

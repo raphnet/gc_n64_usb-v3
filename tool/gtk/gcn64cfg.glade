@@ -579,7 +579,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">True</property>
-                                <signal name="clicked" handler="gtk_widget_show" object="hexfile_chooser" swapped="yes"/>
+                                <signal name="clicked" handler="update_usbadapter_firmware" swapped="no"/>
                               </object>
                               <packing>
                                 <property name="expand">True</property>
@@ -655,35 +655,30 @@
       </object>
     </child>
   </object>
-  <object class="GtkFileChooserDialog" id="hexfile_chooser">
+  <object class="GtkDialog" id="firmware_update_dialog">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Select firmware file...</property>
+    <property name="title" translatable="yes">Firmware update</property>
+    <property name="resizable">False</property>
     <property name="modal">True</property>
     <property name="type_hint">dialog</property>
-    <property name="attached_to">mainWindow</property>
-    <property name="filter">hexfilter</property>
-    <property name="local_only">False</property>
-    <property name="preview_widget_active">False</property>
-    <property name="use_preview_label">False</property>
+    <property name="transient_for">mainWindow</property>
     <child internal-child="vbox">
-      <object class="GtkBox" id="filechooserdialog-vbox1">
+      <object class="GtkBox" id="dialog-vbox1">
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
         <property name="spacing">2</property>
         <child internal-child="action_area">
-          <object class="GtkButtonBox" id="filechooserdialog-action_area1">
+          <object class="GtkButtonBox" id="update_dialog_btnBox">
             <property name="can_focus">False</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton" id="button5">
+              <object class="GtkButton" id="update_cancel_button">
                 <property name="label">gtk-cancel</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="relief">none</property>
                 <property name="use_stock">True</property>
                 <property name="always_show_image">True</property>
-                <signal name="clicked" handler="gtk_widget_hide" object="hexfile_chooser" swapped="yes"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -692,14 +687,13 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button6">
-                <property name="label">gtk-open</property>
+              <object class="GtkButton" id="update_start_btn">
+                <property name="label" translatable="yes">Start update</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-                <property name="yalign">0.46000000834465027</property>
                 <property name="always_show_image">True</property>
+                <signal name="clicked" handler="updatestart_btn_clicked_cb" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -715,42 +709,51 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
-        </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkMessageDialog" id="internalError">
-    <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Error</property>
-    <property name="modal">True</property>
-    <property name="icon_name">dialog-error</property>
-    <property name="type_hint">normal</property>
-    <property name="transient_for">mainWindow</property>
-    <property name="message_type">question</property>
-    <property name="text" translatable="yes">Internal error</property>
-    <child internal-child="vbox">
-      <object class="GtkBox" id="messagedialog-vbox">
-        <property name="can_focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox" id="messagedialog-action_area">
+          <object class="GtkBox" id="box6">
+            <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="homogeneous">True</property>
-            <property name="layout_style">end</property>
+            <property name="valign">center</property>
+            <property name="orientation">vertical</property>
             <child>
-              <placeholder/>
+              <object class="GtkBox" id="box7">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkLabel" id="label10">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Firmware file:</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="lbl_firmware_filename">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">filename.hex</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
             </child>
             <child>
-              <object class="GtkButton" id="internalErrorDialog">
-                <property name="label">gtk-close</property>
+              <object class="GtkProgressBar" id="updateProgress">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-                <property name="yalign">0.47999998927116394</property>
-                <signal name="clicked" handler="gtk_main_quit" swapped="no"/>
+                <property name="can_focus">False</property>
+                <property name="show_text">True</property>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -758,14 +761,29 @@
                 <property name="position">1</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel" id="updateStatus">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Ready</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>
     </child>
+    <action-widgets>
+      <action-widget response="1">update_cancel_button</action-widget>
+    </action-widgets>
   </object>
 </interface>
