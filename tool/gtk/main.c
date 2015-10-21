@@ -16,25 +16,160 @@ struct application {
 	GtkBuilder *builder;
 	GtkWindow *mainwindow;
 	gcn64_hdl_t current_adapter_handle;
+	GThread *updater_thread;
+
+	const char *update_status;
+	const char *updateHexFile;
+	int update_percent;
+	int update_dialog_response;
 };
+
+gboolean updateDonefunc(gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
+
+	printf("updateDonefunc\n");
+	gtk_dialog_response(firmware_update_dialog, app->update_dialog_response);
+	g_thread_join(app->updater_thread);
+
+	return FALSE;
+}
+
+gboolean updateProgress(gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkProgressBar, updateProgress);
+	GET_UI_ELEMENT(GtkLabel, updateStatus);
+
+	gtk_progress_bar_set_fraction(updateProgress, app->update_percent / 100.0);
+	gtk_label_set_text(updateStatus, app->update_status);
+
+	return FALSE;
+}
+
+gpointer updateThreadFunc(gpointer data)
+{
+	struct application *app = data;
+	int i, res;
+	FILE *dfu_fp;
+	char linebuf[256];
+	char cmd[256];
+	int retries = 10;
+
+	app->update_status = "Starting...";
+	app->update_percent = 1;
+	gdk_threads_add_idle(updateProgress, data);
+
+	app->update_percent = 10;
+	app->update_status = "Enter bootloader...";
+
+
+	app->update_percent = 19;
+	app->update_status = "Erasing chip...";
+	do {
+		app->update_percent++;
+		gdk_threads_add_idle(updateProgress, data);
+
+		dfu_fp = popen("dfu-programmer at90usb1287 erase", "r");
+		if (!dfu_fp) {
+			app->update_dialog_response = GTK_RESPONSE_REJECT;
+			gdk_threads_add_idle(updateDonefunc, data);
+			return;
+		}
+
+		do {
+			fgets(linebuf, sizeof(linebuf), dfu_fp);
+		} while(!feof(dfu_fp));
+
+		res = pclose(dfu_fp);
+		printf("Pclose: %d\n", res);
+
+		if (res==0) {
+			break;
+		}
+		sleep(1);
+	} while (retries--);
+
+	if (!retries) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+	}
+
+	app->update_status = "Chip erased";
+	app->update_percent = 30;
+	gdk_threads_add_idle(updateProgress, data);
+
+
+	app->update_status = "Programming ...";
+	app->update_percent = 50;
+	gdk_threads_add_idle(updateProgress, data);
+
+	snprintf(cmd, sizeof(cmd), "dfu-programmer at90usb1287 flash %s", app->updateHexFile);
+	dfu_fp = popen(cmd, "r");
+	if (!dfu_fp) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+		return;
+	}
+
+	do {
+		fgets(linebuf, sizeof(linebuf), dfu_fp);
+		printf("ln: %s\n\n", linebuf);
+		if (strstr(linebuf, "Validating")) {
+			app->update_status = "Validating...";
+			app->update_percent = 70;
+			gdk_threads_add_idle(updateDonefunc, data);
+		}
+	} while(!feof(dfu_fp));
+
+	res = pclose(dfu_fp);
+	printf("Pclose: %d\n", res);
+
+	if (res != 0) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+		return;
+	}
+
+	app->update_status = "Starting firmware...";
+	app->update_percent = 90;
+	gdk_threads_add_idle(updateProgress, data);
+
+	dfu_fp = popen("dfu-programmer at90usb1287 start", "r");
+	if (!dfu_fp) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+		return;
+	}
+
+	res = pclose(dfu_fp);
+	printf("Pclose: %d\n", res);
+
+	if (res!=0) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+		return;
+	}
+
+	app->update_status = "Done";
+	app->update_percent = 100;
+	gdk_threads_add_idle(updateProgress, data);
+
+	printf("Update done\n");
+	app->update_dialog_response = GTK_RESPONSE_OK;
+	gdk_threads_add_idle(updateDonefunc, data);
+	return NULL;
+}
 
 G_MODULE_EXPORT void updatestart_btn_clicked_cb(GtkWidget *w, gpointer data)
 {
 	struct application *app = data;
-	GET_UI_ELEMENT(GtkProgressBar, updateProgress);
-	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
 	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
 	int i;
 
+	app->updater_thread = g_thread_new("updater", updateThreadFunc, app);
 	gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), FALSE);
-
-	for (i=0; i<100; i++) {
-		gtk_progress_bar_set_fraction(updateProgress, i/100.0);
-		usleep(50000);
-		gtk_main_iteration_do(FALSE);
-	}
-
-	gtk_dialog_response(firmware_update_dialog, GTK_RESPONSE_OK);
 }
 
 void infoPopop(struct application *app, const char *message)
@@ -100,6 +235,15 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
 	GET_UI_ELEMENT(GtkLabel, lbl_firmware_filename);
 	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
+	FILE *dfu_fp;
+
+	/* Test for dfu-programmer presence in path*/
+	dfu_fp = popen("dfu-programmer", "r");
+	if (!dfu_fp) {
+		perror("popen");
+		return;
+	}
+	pclose(dfu_fp);
 
 	dialog = gtk_file_chooser_dialog_new("Open .hex file",
 										app->mainwindow,
@@ -121,6 +265,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		basename = g_path_get_basename(filename);
 
 		printf("File selected: %s\n", filename);
+		app->updateHexFile = filename;
 
 		if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
 			errorPopop(app, "Signature not found - This file is invalid or not meant for this adapter");
@@ -129,6 +274,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		/* Prepare the update dialog widgets... */
 		gtk_label_set_text(lbl_firmware_filename, basename);
 		gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), TRUE);
+		updateProgress(data);
 
 		/* Run the dialog */
 		res = gtk_dialog_run(firmware_update_dialog);
@@ -136,6 +282,8 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 
 		if (res == GTK_RESPONSE_OK) {
 			infoPopop(app, "Update succeeded.");
+		} else if (res == GTK_RESPONSE_REJECT) {
+			errorPopop(app, "Update failed. Suggestion: Do not disconnect the adapter and retry right away!");
 		}
 
 		g_free(filename);
