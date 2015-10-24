@@ -58,7 +58,7 @@ int gcn64lib_suspendPolling(gcn64_hdl_t hdl, unsigned char suspend)
 
 int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax)
 {
-	unsigned char cmd[64];
+	unsigned char cmd[32];
 	int n;
 
 	if (dstmax <= 0)
