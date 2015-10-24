@@ -28,7 +28,7 @@
 
 static int dusbr_verbose = 0;
 
-
+#define GCN64_HID_DATA_REPORT_SIZE	40
 #define IS_VERBOSE()	(dusbr_verbose)
 
 int gcn64_init(int verbose)
@@ -196,13 +196,20 @@ void gcn64_closeDevice(gcn64_hdl_t hdl)
 int gcn64_send_cmd(gcn64_hdl_t hdl, const unsigned char *cmd, int cmdlen)
 {
 	hid_device *hdev = (hid_device*)hdl;
-	unsigned char buffer[cmdlen + 1];
+	unsigned char buffer[GCN64_HID_DATA_REPORT_SIZE+1];
 	int n;
+
+	if (cmdlen > (sizeof(buffer)-1)) {
+		fprintf(stderr, "Error: Command too long\n");
+		return -1;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = 0x00; // report ID set to 0 (device has only one)
 	memcpy(buffer + 1, cmd, cmdlen);
 
-	n = hid_send_feature_report(hdev, buffer, cmdlen+1);
+	n = hid_send_feature_report(hdev, buffer, sizeof(buffer));
 	if (n < 0) {
 		fprintf(stderr, "Could not send feature report (%ls)\n", hid_error(hdev));
 		return -1;
@@ -214,14 +221,14 @@ int gcn64_send_cmd(gcn64_hdl_t hdl, const unsigned char *cmd, int cmdlen)
 int gcn64_poll_result(gcn64_hdl_t hdl, unsigned char *cmd, int cmd_maxlen)
 {
 	hid_device *hdev = (hid_device*)hdl;
-	unsigned char buffer[cmd_maxlen + 1];
+	unsigned char buffer[GCN64_HID_DATA_REPORT_SIZE+1];
 	int res_len;
 	int n;
 
-	memset(buffer, 0, cmd_maxlen + 1);
+	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = 0x00; // report ID set to 0 (device has only one)
 
-	n = hid_get_feature_report(hdev, buffer, cmd_maxlen+1);
+	n = hid_get_feature_report(hdev, buffer, sizeof(buffer));
 	if (n < 0) {
 		fprintf(stderr, "Could not send feature report (%ls)\n", hid_error(hdev));
 		return -1;
@@ -231,8 +238,15 @@ int gcn64_poll_result(gcn64_hdl_t hdl, unsigned char *cmd, int cmd_maxlen)
 	}
 	res_len = n-1;
 
-	if (res_len>0)
-		memcpy(cmd, buffer+1, res_len);
+	if (res_len>0) {
+		int copy_len;
+
+		copy_len = res_len;
+		if (copy_len > cmd_maxlen) {
+			copy_len = cmd_maxlen;
+		}
+		memcpy(cmd, buffer+1, copy_len);
+	}
 
 	return res_len;
 }
