@@ -405,6 +405,7 @@ int main(int argc, char **argv)
 						i++;
 						if (i>100)
 							i=0;
+						printf("."); fflush(stdout);
 					} while (nonstop);
 					printf("Test ok\n");
 				}
