@@ -136,3 +136,16 @@ int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max)
 	return 0;
 }
 
+int gcn64lib_bootloader(gcn64_hdl_t hdl)
+{
+	unsigned char cmd[4];
+	int cmdlen;
+
+	cmd[0] = RQ_GCN64_JUMP_TO_BOOTLOADER;
+	cmdlen = 1;
+
+	gcn64_exchange(hdl, cmd, cmdlen, cmd, sizeof(cmd));
+
+	return 0;
+}
+

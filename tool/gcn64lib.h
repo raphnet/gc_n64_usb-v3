@@ -8,6 +8,7 @@ int gcn64lib_setConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *data
 int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, unsigned char rx_max);
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx);
 int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax);
+int gcn64lib_bootloader(gcn64_hdl_t hdl);
 
 int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max);
 int gcn64lib_16bit_scan(gcn64_hdl_t hdl, unsigned short min, unsigned short max);

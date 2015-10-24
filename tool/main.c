@@ -319,9 +319,7 @@ int main(int argc, char **argv)
 
 			case OPT_BOOTLOADER:
 				printf("Sending 'jump to bootloader' command...");
-				cmd[0] = RQ_GCN64_JUMP_TO_BOOTLOADER;
-				cmdlen = 1;
-				do_exchange = 1;
+				gcn64lib_bootloader(hdl);
 				break;
 
 			case OPT_SUSPEND_POLLING:
