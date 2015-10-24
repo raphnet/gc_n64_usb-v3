@@ -102,9 +102,9 @@ static void hiddata_processCommandBuffer(void)
 			break;
 		case RQ_GCN64_GET_VERSION:
 			// CMD: RQ
-			// Answer: RQ, version string
+			// Answer: RQ, version string (zero-terminated)
 			strcpy((char*)(cmdbuf + 1), g_version);
-			cmdbuf_len = 1 + strlen(g_version);
+			cmdbuf_len = 1 + strlen(g_version) + 1;
 			break;
 	}
 
