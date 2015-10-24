@@ -16,6 +16,7 @@ struct application {
 	GtkBuilder *builder;
 	GtkWindow *mainwindow;
 	gcn64_hdl_t current_adapter_handle;
+	struct gcn64_info current_adapter_info;
 	GThread *updater_thread;
 
 	const char *update_status;
@@ -23,6 +24,9 @@ struct application {
 	int update_percent;
 	int update_dialog_response;
 };
+
+static void updateGuiFromAdapter(struct application *app);
+gboolean rebuild_device_list_store(gpointer data);
 
 gboolean updateDonefunc(gpointer data)
 {
@@ -32,6 +36,8 @@ gboolean updateDonefunc(gpointer data)
 	printf("updateDonefunc\n");
 	gtk_dialog_response(firmware_update_dialog, app->update_dialog_response);
 	g_thread_join(app->updater_thread);
+
+	updateGuiFromAdapter(app);
 
 	return FALSE;
 }
@@ -51,7 +57,7 @@ gboolean updateProgress(gpointer data)
 gpointer updateThreadFunc(gpointer data)
 {
 	struct application *app = data;
-	int i, res;
+	int res;
 	FILE *dfu_fp;
 	char linebuf[256];
 	char cmd[256];
@@ -64,6 +70,9 @@ gpointer updateThreadFunc(gpointer data)
 	app->update_percent = 10;
 	app->update_status = "Enter bootloader...";
 
+	gcn64lib_bootloader(app->current_adapter_handle);
+	gcn64_closeDevice(app->current_adapter_handle);
+	app->current_adapter_handle = NULL;
 
 	app->update_percent = 19;
 	app->update_status = "Erasing chip...";
@@ -75,7 +84,7 @@ gpointer updateThreadFunc(gpointer data)
 		if (!dfu_fp) {
 			app->update_dialog_response = GTK_RESPONSE_REJECT;
 			gdk_threads_add_idle(updateDonefunc, data);
-			return;
+			return NULL;
 		}
 
 		do {
@@ -97,12 +106,12 @@ gpointer updateThreadFunc(gpointer data)
 	}
 
 	app->update_status = "Chip erased";
-	app->update_percent = 30;
+	app->update_percent = 20;
 	gdk_threads_add_idle(updateProgress, data);
 
 
 	app->update_status = "Programming ...";
-	app->update_percent = 50;
+	app->update_percent = 30;
 	gdk_threads_add_idle(updateProgress, data);
 
 	snprintf(cmd, sizeof(cmd), "dfu-programmer at90usb1287 flash %s", app->updateHexFile);
@@ -110,7 +119,7 @@ gpointer updateThreadFunc(gpointer data)
 	if (!dfu_fp) {
 		app->update_dialog_response = GTK_RESPONSE_REJECT;
 		gdk_threads_add_idle(updateDonefunc, data);
-		return;
+		return NULL;
 	}
 
 	do {
@@ -129,18 +138,18 @@ gpointer updateThreadFunc(gpointer data)
 	if (res != 0) {
 		app->update_dialog_response = GTK_RESPONSE_REJECT;
 		gdk_threads_add_idle(updateDonefunc, data);
-		return;
+		return NULL;
 	}
 
 	app->update_status = "Starting firmware...";
-	app->update_percent = 90;
+	app->update_percent = 80;
 	gdk_threads_add_idle(updateProgress, data);
 
 	dfu_fp = popen("dfu-programmer at90usb1287 start", "r");
 	if (!dfu_fp) {
 		app->update_dialog_response = GTK_RESPONSE_REJECT;
 		gdk_threads_add_idle(updateDonefunc, data);
-		return;
+		return NULL;
 	}
 
 	res = pclose(dfu_fp);
@@ -149,8 +158,30 @@ gpointer updateThreadFunc(gpointer data)
 	if (res!=0) {
 		app->update_dialog_response = GTK_RESPONSE_REJECT;
 		gdk_threads_add_idle(updateDonefunc, data);
-		return;
+		return NULL;
 	}
+
+	app->update_status = "Waiting for device...";
+	app->update_percent = 90;
+	gdk_threads_add_idle(updateProgress, data);
+
+	retries = 6;
+	do {
+		app->current_adapter_handle = gcn64_openBy(&app->current_adapter_info, GCN64_FLG_OPEN_BY_SERIAL);
+		if (app->current_adapter_handle)
+			break;
+		sleep(1);
+		app->update_percent++;
+		gdk_threads_add_idle(updateProgress, data);
+	} while (retries--);
+
+	if (!app->current_adapter_handle) {
+		app->update_dialog_response = GTK_RESPONSE_REJECT;
+		gdk_threads_add_idle(updateDonefunc, data);
+		return NULL;
+	}
+
+	gdk_threads_add_idle(rebuild_device_list_store, data);
 
 	app->update_status = "Done";
 	app->update_percent = 100;
@@ -166,10 +197,21 @@ G_MODULE_EXPORT void updatestart_btn_clicked_cb(GtkWidget *w, gpointer data)
 {
 	struct application *app = data;
 	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
-	int i;
 
 	app->updater_thread = g_thread_new("updater", updateThreadFunc, app);
 	gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), FALSE);
+}
+
+void deselect_adapter(struct application *app)
+{
+	GET_UI_ELEMENT(GtkComboBox, cb_adapter_list);
+
+	if (app->current_adapter_handle) {
+		gcn64_closeDevice(app->current_adapter_handle);
+		app->current_adapter_handle = NULL;
+	}
+
+	gtk_combo_box_set_active_iter(cb_adapter_list, NULL);
 }
 
 void infoPopop(struct application *app, const char *message)
@@ -293,7 +335,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 	gtk_widget_destroy(dialog);
 }
 
-static void updateGuiFromAdapter(struct application *app, struct gcn64_info *info)
+static void updateGuiFromAdapter(struct application *app)
 {
 	unsigned char buf[32];
 	int n;
@@ -313,6 +355,12 @@ static void updateGuiFromAdapter(struct application *app, struct gcn64_info *inf
 	GET_UI_ELEMENT(GtkLabel, label_usb_id);
 	GET_UI_ELEMENT(GtkLabel, label_device_path);
 	int i;
+	struct gcn64_info *info = &app->current_adapter_info;
+
+	if (!app->current_adapter_handle) {
+		deselect_adapter(app);
+		return;
+	}
 
 	GtkSpinButton *pollInterval0 = GTK_SPIN_BUTTON( gtk_builder_get_object(app->builder, "pollInterval0") );
 
@@ -354,6 +402,11 @@ G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
 	buf = (int)value;
 
 	n = gcn64lib_setConfig(app->current_adapter_handle, CFG_PARAM_POLL_INTERVAL0, &buf, 1);
+	if (n != 0) {
+		errorPopop(app, "Error setting configuration");
+		deselect_adapter(app);
+		rebuild_device_list_store(data);
+	}
 }
 
 
@@ -371,36 +424,38 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkToggleButton, chkbtn_gc_invert_trig) },
 		{ },
 	};
-	int i;
+	int i, n;
 	unsigned char buf;
 
 	for (i=0; configurable_bits[i].chkbtn; i++) {
 		buf = gtk_toggle_button_get_active(configurable_bits[i].chkbtn);
-		gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, &buf, 1);
+		n = gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, &buf, 1);
+		if (n != 0) {
+			errorPopop(app, "Error setting configuration");
+			deselect_adapter(app);
+			rebuild_device_list_store(app);
+			break;
+		}
 		printf("cfg param %02x now set to %d\n", configurable_bits[i].cfg_param, buf);
 	}
 }
 
-G_MODULE_EXPORT void onMainWindowShow(GtkWidget *win, gpointer data)
+gboolean rebuild_device_list_store(gpointer data)
 {
-	int res;
+	struct application *app = data;
 	struct gcn64_list_ctx *listctx;
 	struct gcn64_info info;
-	struct application *app = data;
 	GtkListStore *list_store;
-
-	res = gcn64_init(1);
-	if (res) {
-		GtkWidget *d = GTK_WIDGET( gtk_builder_get_object(app->builder, "internalError") );
-		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "gcn64_init failed (returned %d)", res);
-		gtk_widget_show(d);
-		return;
-	}
+	GET_UI_ELEMENT(GtkComboBox, cb_adapter_list);
 
 	list_store = GTK_LIST_STORE( gtk_builder_get_object(app->builder, "adaptersList") );
 
+	gtk_list_store_clear(list_store);
+
 	printf("Listing device...\n");
 	listctx = gcn64_allocListCtx();
+	if (!listctx)
+		return FALSE;
 
 	while (gcn64_listDevices(&info, listctx)) {
 		GtkTreeIter iter;
@@ -419,9 +474,31 @@ G_MODULE_EXPORT void onMainWindowShow(GtkWidget *win, gpointer data)
 							3, g_memdup(&info, sizeof(struct gcn64_info)),
 								-1);
 		}
+		if (app->current_adapter_handle) {
+			if (!wcscmp(app->current_adapter_info.str_serial, info.str_serial)) {
+				gtk_combo_box_set_active_iter(cb_adapter_list, &iter);
+			}
+		}
 	}
 
 	gcn64_freeListCtx(listctx);
+	return FALSE;
+}
+
+G_MODULE_EXPORT void onMainWindowShow(GtkWidget *win, gpointer data)
+{
+	int res;
+	struct application *app = data;
+
+	res = gcn64_init(1);
+	if (res) {
+		GtkWidget *d = GTK_WIDGET( gtk_builder_get_object(app->builder, "internalError") );
+		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "gcn64_init failed (returned %d)", res);
+		gtk_widget_show(d);
+		return;
+	}
+
+	rebuild_device_list_store(data);
 }
 
 G_MODULE_EXPORT void adapterSelected(GtkComboBox *cb, gpointer data)
@@ -444,10 +521,14 @@ G_MODULE_EXPORT void adapterSelected(GtkComboBox *cb, gpointer data)
 
 		app->current_adapter_handle = gcn64_openDevice(info);
 		if (!app->current_adapter_handle) {
-			printf("Access error!\n");
+			errorPopop(app, "Failed to open adapter");
+			deselect_adapter(app);
+			return;
 		}
 
-		updateGuiFromAdapter(app, info);
+		memcpy(&app->current_adapter_info, info, sizeof(struct gcn64_info));
+
+		updateGuiFromAdapter(app);
 		gtk_widget_set_sensitive(adapter_details, TRUE);
 	}
 }
@@ -471,7 +552,10 @@ G_MODULE_EXPORT void resume_polling(GtkButton *button, gpointer data)
 	gcn64lib_suspendPolling(app->current_adapter_handle, 0);
 }
 
-
+G_MODULE_EXPORT void onFileRescan(GtkWidget *wid, gpointer data)
+{
+	rebuild_device_list_store(data);
+}
 
 int
 main( int    argc,
