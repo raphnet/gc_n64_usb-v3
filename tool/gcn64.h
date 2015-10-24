@@ -29,6 +29,19 @@ void gcn64_freeListCtx(struct gcn64_list_ctx *ctx);
 struct gcn64_info *gcn64_listDevices(struct gcn64_info *info, struct gcn64_list_ctx *ctx);
 
 gcn64_hdl_t gcn64_openDevice(struct gcn64_info *dev);
+
+#define GCN64_FLG_OPEN_BY_SERIAL	1	/** Serial must match */
+#define GCN64_FLG_OPEN_BY_PATH		2	/** Path must match */
+#define GCN64_FLG_OPEN_BY_VID		4	/** USB VID must match */
+#define GCN64_FLG_OPEN_BY_PID		8	/** USB PID MUST match */
+/**
+ * \brief Open a device matching a serial number
+ * \param dev The device structure
+ * \param flags Flags 
+ * \return A handle to the opened device, or NULL if not found
+ **/
+gcn64_hdl_t gcn64_openBy(struct gcn64_info *dev, unsigned char flags);
+
 void gcn64_closeDevice(gcn64_hdl_t hdl);
 
 int gcn64_send_cmd(gcn64_hdl_t hdl, const unsigned char *cmd, int len);

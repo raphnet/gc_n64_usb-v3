@@ -74,6 +74,7 @@ void gcn64_freeListCtx(struct gcn64_list_ctx *ctx)
 
 /**
  * \brief List instances of our rgbleds device on the USB busses.
+ * \param info Pointer to gcn64_info structure to store data
  * \param dst Destination buffer for device serial number/id.
  * \param dstbuf_size Destination buffer size.
  */
@@ -138,6 +139,50 @@ gcn64_hdl_t gcn64_openDevice(struct gcn64_info *dev)
 		return NULL;
 
 	return hdev;
+}
+
+gcn64_hdl_t gcn64_openBy(struct gcn64_info *dev, unsigned char flags)
+{
+	struct gcn64_list_ctx *ctx;
+	struct gcn64_info inf;
+	gcn64_hdl_t h;
+
+	printf("gcn64_openBy, flags=0x%02x\n", flags);
+
+	ctx = gcn64_allocListCtx();
+	if (!ctx)
+		return NULL;
+
+	while (gcn64_listDevices(&inf, ctx)) {
+		printf("Considering '%s'\n", inf.str_path);
+		if (flags & GCN64_FLG_OPEN_BY_SERIAL) {
+			if (wcscmp(inf.str_serial, dev->str_serial))
+				continue;
+		}
+
+		if (flags & GCN64_FLG_OPEN_BY_PATH) {
+			if (strcmp(inf.str_path, dev->str_path))
+				continue;
+		}
+
+		if (flags & GCN64_FLG_OPEN_BY_VID) {
+			if (inf.usb_vid != dev->usb_vid)
+				continue;
+		}
+
+		if (flags & GCN64_FLG_OPEN_BY_PID) {
+			if (inf.usb_pid != dev->usb_pid)
+				continue;
+		}
+
+		printf("Found device. opening...\n");
+		h = gcn64_openDevice(&inf);
+		gcn64_freeListCtx(ctx);
+		return h;
+	}
+
+	gcn64_freeListCtx(ctx);
+	return NULL;
 }
 
 void gcn64_closeDevice(gcn64_hdl_t hdl)
