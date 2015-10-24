@@ -59,6 +59,9 @@ static void hiddata_processCommandBuffer(void)
 {
 	int bits;
 	unsigned char channel;
+#ifdef DEBUG
+	int i;
+#endif
 
 	if (cmdbuf_len < 1) {
 		state = STATE_IDLE;
