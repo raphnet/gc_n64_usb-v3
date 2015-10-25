@@ -4,10 +4,10 @@
 #include <string.h>
 #include <glib.h>
 #include <gtk/gtk.h>
-#include "../gcn64.h"
-#include "../gcn64lib.h"
-#include "../../requests.h"
-#include "../ihex.h"
+#include "gcn64.h"
+#include "gcn64lib.h"
+#include "../requests.h"
+#include "ihex.h"
 
 #define GET_ELEMENT(TYPE, ELEMENT)	(TYPE *)gtk_builder_get_object(app->builder, #ELEMENT)
 #define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = GET_ELEMENT(TYPE, ELEMENT)
