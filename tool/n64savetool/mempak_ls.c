@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	printf("Mempak image loaded. Image type %d\n", mpk->file_format);
+	printf("Mempak image loaded. Image type %d (%s)\n", mpk->file_format, mempak_format2string(mpk->file_format));
 
 	if (0 != validate_mempak(mpk)) {
 		printf("Mempak invalid (not formatted or corrupted)\n");
@@ -30,6 +30,7 @@ int main(int argc, char **argv)
 	}
 
 	printf("Mempak content is valid\n");
+	printf("Block usage: %d / %d\n", 123-get_mempak_free_space(mpk), 123);
 
 	for (note = 0; note<MEMPAK_NUM_NOTES; note++) {
 		entry_structure_t note_data;
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
 				}
 				printf("\n");
 			} else {
-				printf("Invalid\n");
+				printf("Free\n");
 			}
 
 		}
