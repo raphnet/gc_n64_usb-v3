@@ -15,6 +15,7 @@
 struct application {
 	GtkBuilder *builder;
 	GtkWindow *mainwindow;
+
 	gcn64_hdl_t current_adapter_handle;
 	struct gcn64_info current_adapter_info;
 	GThread *updater_thread;
@@ -27,6 +28,7 @@ struct application {
 
 static void updateGuiFromAdapter(struct application *app);
 gboolean rebuild_device_list_store(gpointer data);
+void deselect_adapter(struct application *app);
 
 gboolean updateDonefunc(gpointer data)
 {
@@ -37,6 +39,7 @@ gboolean updateDonefunc(gpointer data)
 	gtk_dialog_response(firmware_update_dialog, app->update_dialog_response);
 	g_thread_join(app->updater_thread);
 
+	rebuild_device_list_store(data);
 	updateGuiFromAdapter(app);
 
 	return FALSE;
@@ -50,6 +53,15 @@ gboolean updateProgress(gpointer data)
 
 	gtk_progress_bar_set_fraction(updateProgress, app->update_percent / 100.0);
 	gtk_label_set_text(updateStatus, app->update_status);
+
+	return FALSE;
+}
+
+gboolean closeAdapter(gpointer data)
+{
+	struct application *app = data;
+
+	deselect_adapter(app);
 
 	return FALSE;
 }
@@ -71,8 +83,7 @@ gpointer updateThreadFunc(gpointer data)
 	app->update_status = "Enter bootloader...";
 
 	gcn64lib_bootloader(app->current_adapter_handle);
-	gcn64_closeDevice(app->current_adapter_handle);
-	app->current_adapter_handle = NULL;
+	gdk_threads_add_idle(closeAdapter, data);
 
 	app->update_percent = 19;
 	app->update_status = "Erasing chip...";
@@ -161,6 +172,7 @@ gpointer updateThreadFunc(gpointer data)
 		return NULL;
 	}
 
+
 	app->update_status = "Waiting for device...";
 	app->update_percent = 90;
 	gdk_threads_add_idle(updateProgress, data);
@@ -181,7 +193,6 @@ gpointer updateThreadFunc(gpointer data)
 		return NULL;
 	}
 
-	gdk_threads_add_idle(rebuild_device_list_store, data);
 
 	app->update_status = "Done";
 	app->update_percent = 100;
@@ -205,6 +216,8 @@ G_MODULE_EXPORT void updatestart_btn_clicked_cb(GtkWidget *w, gpointer data)
 void deselect_adapter(struct application *app)
 {
 	GET_UI_ELEMENT(GtkComboBox, cb_adapter_list);
+
+	printf("deselect adapter\n");
 
 	if (app->current_adapter_handle) {
 		gcn64_closeDevice(app->current_adapter_handle);
@@ -280,12 +293,15 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 	FILE *dfu_fp;
 
 	/* Test for dfu-programmer presence in path*/
-	dfu_fp = popen("dfu-programmer", "r");
+	dfu_fp = popen("dfu-programmer --help", "r");
 	if (!dfu_fp) {
 		perror("popen");
 		return;
 	}
-	pclose(dfu_fp);
+	if (pclose(dfu_fp)) {
+		errorPopop(app, "dfu-programmmer not found. Cannot perform update.");
+		return;
+	}
 
 	dialog = gtk_file_chooser_dialog_new("Open .hex file",
 										app->mainwindow,
@@ -327,6 +343,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		} else if (res == GTK_RESPONSE_REJECT) {
 			errorPopop(app, "Update failed. Suggestion: Do not disconnect the adapter and retry right away!");
 		}
+		printf("Update dialog done\n");
 
 		g_free(filename);
 		g_free(basename);
@@ -376,7 +393,11 @@ static void updateGuiFromAdapter(struct application *app)
 		gtk_toggle_button_set_active(configurable_bits[i].chkbtn, buf[0]);
 	}
 
-	gtk_label_set_text(label_product_name, g_ucs4_to_utf8((void*)info->str_prodname, -1, NULL, NULL, NULL));
+	if (sizeof(wchar_t)==4) {
+		gtk_label_set_text(label_product_name, g_ucs4_to_utf8((void*)info->str_prodname, -1, NULL, NULL, NULL));
+	} else {
+		gtk_label_set_text(label_product_name, g_utf16_to_utf8((void*)info->str_prodname, -1, NULL, NULL, NULL));
+	}
 
 	if (0 == gcn64lib_getVersion(app->current_adapter_handle, (char*)buf, sizeof(buf))) {
 		gtk_label_set_text(label_firmware_version, (char*)buf);
@@ -509,7 +530,7 @@ G_MODULE_EXPORT void adapterSelected(GtkComboBox *cb, gpointer data)
 	GtkWidget *adapter_details = GTK_WIDGET( gtk_builder_get_object(app->builder, "adapterDetails") );
 	struct gcn64_info *info;
 
-	if (!app->current_adapter_handle) {
+	if (app->current_adapter_handle) {
 		gcn64_closeDevice(app->current_adapter_handle);
 		app->current_adapter_handle = NULL;
 		gtk_widget_set_sensitive(adapter_details, FALSE);
