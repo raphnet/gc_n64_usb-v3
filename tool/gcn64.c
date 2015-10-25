@@ -135,8 +135,9 @@ gcn64_hdl_t gcn64_openDevice(struct gcn64_info *dev)
 	}
 
 	hdev = hid_open_path(dev->str_path);
-	if (!hdev)
+	if (!hdev) {
 		return NULL;
+	}
 
 	return hdev;
 }
@@ -147,14 +148,17 @@ gcn64_hdl_t gcn64_openBy(struct gcn64_info *dev, unsigned char flags)
 	struct gcn64_info inf;
 	gcn64_hdl_t h;
 
-	printf("gcn64_openBy, flags=0x%02x\n", flags);
+	if (IS_VERBOSE())
+		printf("gcn64_openBy, flags=0x%02x\n", flags);
 
 	ctx = gcn64_allocListCtx();
 	if (!ctx)
 		return NULL;
 
 	while (gcn64_listDevices(&inf, ctx)) {
-		printf("Considering '%s'\n", inf.str_path);
+		if (IS_VERBOSE())
+			printf("Considering '%s'\n", inf.str_path);
+
 		if (flags & GCN64_FLG_OPEN_BY_SERIAL) {
 			if (wcscmp(inf.str_serial, dev->str_serial))
 				continue;
@@ -175,7 +179,9 @@ gcn64_hdl_t gcn64_openBy(struct gcn64_info *dev, unsigned char flags)
 				continue;
 		}
 
-		printf("Found device. opening...\n");
+		if (IS_VERBOSE())
+			printf("Found device. opening...\n");
+
 		h = gcn64_openDevice(&inf);
 		gcn64_freeListCtx(ctx);
 		return h;
@@ -188,6 +194,7 @@ gcn64_hdl_t gcn64_openBy(struct gcn64_info *dev, unsigned char flags)
 void gcn64_closeDevice(gcn64_hdl_t hdl)
 {
 	hid_device *hdev = (hid_device*)hdl;
+
 	if (hdev) {
 		hid_close(hdev);
 	}
