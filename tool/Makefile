@@ -1,8 +1,15 @@
 CC=gcc
 LD=$(CC)
 
-CFLAGS=-Wall -g `pkg-config hidapi-hidraw --cflags`
-LDFLAGS=`pkg-config hidapi-hidraw --libs` -g
+UNAME := $(shell uname -s)
+ifeq ($(UNAME), Linux)
+HIDAPI_NAME=hidapi-hidraw
+else
+HIDAPI_NAME=hidapi
+endif
+
+CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags`
+LDFLAGS=`pkg-config $(HIDAPI_NAME) --libs` -g
 GTK_CFLAGS=`pkg-config --cflags gtk+-3.0 gmodule-2.0`
 GTK_LDFLAGS=`pkg-config --libs gtk+-3.0 gmodule-2.0`
 
