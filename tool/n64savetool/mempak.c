@@ -4,6 +4,7 @@
 #include "mempak.h"
 
 #define DEXDRIVE_DATA_OFFSET	0x1040
+#define DEXDRIVE_COMMENT_OFFSET	0x40
 
 mempak_structure_t *mempak_new(void)
 {
@@ -84,18 +85,18 @@ int mempak_saveToFile(mempak_structure_t *mpk, const char *dst_filename, unsigne
 			fclose(fptr);
 			return -1;
 
-		case MPK_SAVE_FORMAT_MPK:
+		case MPK_FORMAT_MPK:
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			break;
 
-		case MPK_SAVE_FORMAT_MPK4:
+		case MPK_FORMAT_MPK4:
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			break;
 
-		case MPK_SAVE_FORMAT_N64:
+		case MPK_FORMAT_N64:
 			// Note: This should work well for files that will
 			// be imported by non-official software which typically
 			// only look for the 123-456-STD header and then
@@ -146,7 +147,11 @@ mempak_structure_t *mempak_loadFromFile(const char *filename)
 		if (file_size == 0x8000*i) {
 			num_images = i+1;
 			printf("MPK file Contains %d image(s)\n", num_images);
-			mpk->source = MPK_SRC_RAW_IMAGE;
+			if (file_size == 0x8000) {
+				mpk->file_format = MPK_FORMAT_MPK;
+			} else {
+				mpk->file_format = MPK_FORMAT_MPK4;
+			}
 		}
 	}
 
@@ -157,9 +162,28 @@ mempak_structure_t *mempak_loadFromFile(const char *filename)
 		fread(header, 11, 1, fptr);
 		if (0 == memcmp(header, magic, sizeof(header))) {
 			printf(".N64 file detected\n");
-			// TODO : Extract comments and other info. from the header
-			offset = DEXDRIVE_DATA_OFFSET; // Thanks to N-Rage`s Dinput8 Plugin sources
-			mpk->source = MPK_SRC_DEX_IMAGE;
+
+			/* At 0x40 there are often comments in .N64 files.
+			 * The actual memory card data starts at 0x1040.
+			 * This means there are exactly 0x1000 bytes for
+			 * one large comment, or, since 0x1000 / 256 = 16,
+			 * more likely one comment per note? That's what
+			 * I'm assuming here. */
+			fseek(fptr, DEXDRIVE_COMMENT_OFFSET, SEEK_SET);
+#if MAX_NOTE_COMMENT_SIZE != 257
+#error
+#endif
+			for (i=0; i<16; i++) {
+				fread(mpk->note_comments[i], 256, 1, fptr);
+				/* The comments appear to be zero terminated, but I don't
+				 * know if the original tool allowed entering a maximum
+				 * of 256 or 255 bytes. So to be safe, I use buffers of
+				 * 257 bytes */
+				mpk->note_comments[i][256] = 0;
+			}
+
+			offset = DEXDRIVE_DATA_OFFSET;
+			mpk->file_format = MPK_FORMAT_N64;
 		}
 	}
 

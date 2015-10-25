@@ -6,9 +6,10 @@ int main(int argc, char **argv)
 {
 	mempak_structure_t *mpk;
 	const char *outfile;
+	unsigned char type;
 
 	if (argc < 2) {
-		printf("Usage: ./mempak_ls file\n");
+		printf("Usage: ./mempak_format file\n");
 		printf("\n");
 		printf("Raw files (.MPK, .BIN) and Dexdrive (.N64) formats accepted.\n");
 		return 1;
@@ -20,7 +21,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	mempak_saveToFile(mpk, outfile, MPK_SAVE_FORMAT_N64);
+	type = MPK_FORMAT_N64;
+	mempak_saveToFile(mpk, outfile, type);
 
 	mempak_free(mpk);
 

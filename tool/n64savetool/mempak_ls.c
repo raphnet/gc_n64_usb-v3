@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "mempak.h"
 
 int main(int argc, char **argv)
@@ -21,7 +22,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	printf("Mempak image loaded. Image type %d\n", mpk->source);
+	printf("Mempak image loaded. Image type %d\n", mpk->file_format);
 
 	if (0 != validate_mempak(mpk)) {
 		printf("Mempak invalid (not formatted or corrupted)\n");
@@ -40,9 +41,12 @@ int main(int argc, char **argv)
 		} else {
 			if (note_data.valid) {
 				printf("%s (%d blocks) ", note_data.name, note_data.blocks);
-				printf("%08x ", note_data.vendor);
-				printf("%04x ", note_data.game_id);
-				printf("%02x ", note_data.region);
+//				printf("%08x ", note_data.vendor);
+//				printf("%04x ", note_data.game_id);
+//				printf("%02x ", note_data.region);
+				if (strlen(mpk->note_comments[note]) > 0) {
+					printf("{ %s }", mpk->note_comments[note]);
+				}
 				printf("\n");
 			} else {
 				printf("Invalid\n");
