@@ -47,10 +47,12 @@ int main(int argc, char **argv)
 			case 'h':
 				print_usage();
 				return 0;
-
 			case 'f':
 				format = optarg;
 				break;
+			case '?':
+				fprintf(stderr, "Unknown argument. Try -h\n");
+				return -1;
 		}
 	}
 
