@@ -71,6 +71,8 @@ int read_mempak_entry_data( mempak_structure_t *pak, entry_structure_t *entry, u
 int write_mempak_entry_data( mempak_structure_t *pak, entry_structure_t *entry, uint8_t *data );
 int delete_mempak_entry( mempak_structure_t *pak, entry_structure_t *entry );
 
+int mempak_parse_entry( const uint8_t *tnote, entry_structure_t *note );
+
 #ifdef __cplusplus
 }
 #endif

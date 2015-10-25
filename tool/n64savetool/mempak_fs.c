@@ -363,7 +363,8 @@ static int __validate_region( uint8_t region )
  * @retval -2 note inode out of bounds
  * @retval -3 note region invalid
  */
-static int __read_note( uint8_t *tnote, entry_structure_t *note )
+//static int __read_note( uint8_t *tnote, entry_structure_t *note )
+int mempak_parse_entry( const uint8_t *tnote, entry_structure_t *note )
 {
     if( !tnote || !note ) { return -1; }
 
@@ -744,7 +745,7 @@ int get_mempak_entry( mempak_structure_t *mpk, int entry, entry_structure_t *ent
     }
 #endif
 
-    if( __read_note( data, entry_data ) )
+    if( mempak_parse_entry( data, entry_data ) )
     {
         /* Note is most likely empty, don't bother getting length */
         return 0;
@@ -1076,7 +1077,7 @@ int write_mempak_entry_data( mempak_structure_t *mpk, entry_structure_t *entry, 
         }
 #endif
         /* See if we can write to this note */
-        __read_note( tmp_data, &tmp_entry );
+        mempak_parse_entry( tmp_data, &tmp_entry );
         if( tmp_entry.valid == 0 )
         {
             entry->entry_id = i;
@@ -1161,7 +1162,7 @@ int delete_mempak_entry( mempak_structure_t *mpk, entry_structure_t *entry )
     }
 #endif
 
-    if( __read_note( data, &tmp_entry ) )
+    if( mempak_parse_entry( data, &tmp_entry ) )
     {
         /* Couldn't parse entry, can't be valid */
         return -2;
