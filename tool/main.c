@@ -29,7 +29,7 @@
 #include "gcn64.h"
 #include "gcn64lib.h"
 #include "gc2n64_adapter.h"
-#include "mempak.h"
+#include "mempak_old.h"
 #include "../requests.h"
 #include "../gcn64_protocol.h"
 

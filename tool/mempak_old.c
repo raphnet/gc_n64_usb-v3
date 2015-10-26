@@ -5,7 +5,7 @@
 #include "hexdump.h"
 #include "gcn64.h"
 #include "gcn64lib.h"
-#include "mempak.h"
+#include "mempak_old.h"
 #include "../gcn64_protocol.h"
 #include "../requests.h"
 
@@ -98,7 +98,7 @@ static uint8_t __calc_data_crc( uint8_t *data )
 
 int mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32])
 {
-	unsigned char cmd[64];
+	unsigned char cmd[40];
 	int cmdlen;
 	int n;
 	uint16_t addr_crc;
@@ -140,11 +140,6 @@ int mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char dst[32]
 		return -1;
 	}
 
-//	n = gcn64_exchange(hdl, cmd, cmdlen, cmd, sizeof(cmd));
-//	if (n != 35)
-//		return -1;
-
-	//memcpy(dst, cmd + 2, 0x20);
 	memcpy(dst, cmd, 0x20);
 
 	crc = __calc_data_crc(dst);
@@ -162,7 +157,7 @@ int mempak_init(gcn64_hdl_t hdl)
 	int res;
 
 	memset(buf, 0xfe, 32);
-	res = mempak_writeBlock(hdl, 0x8001, buf);
+	res = mempak_readBlock(hdl, 0x8001, buf);
 
 	if (res == 0xe1) {
 		return 0;
@@ -188,22 +183,12 @@ int mempak_writeAll(gcn64_hdl_t hdl, unsigned char srcbuf[0x8000])
 			return -1;
 		}
 
-		printf("\nwrite returned:0x %02x\n", res);
-		printHexBuf(&srcbuf[addr], res);
-
-
 		if (0x20 != mempak_readBlock(hdl, addr, readback)) {
+			// TODO : Why not retry?
 			fprintf(stderr, "readback failed\n");
 			return -2;
 		}
 
-		printf("Wrote: ");
-		printHexBuf(&srcbuf[addr], 0x20);
-
-		printf("Read: ");
-		printHexBuf(readback, 0x20);
-
-		break;
 	}
 	printf("\nDone!\n");
 
@@ -315,9 +300,9 @@ int mempak_writeFromFile(gcn64_hdl_t hdl, const char *in_filename)
 
 	/* Raw binary images. Those can contain more than one card's data. For
 	 * instance, Mupen64 seems to contain four saves. */
-	for (i=0; i<4; i++) {
+	for (i=1; i<=4; i++) {
 		if (file_size == 0x8000*i) {
-			num_images = i+1;
+			num_images = i;
 			printf("MPK file Contains %d image(s)\n", num_images);
 		}
 	}

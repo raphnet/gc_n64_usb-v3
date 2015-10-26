@@ -25,10 +25,10 @@ PREFIX=/usr/local
 
 all: gcn64ctl gcn64ctl_gui
 
-gcn64ctl_gui: gcn64ctl_gui.o gcn64.o gcn64lib.o mempak.o hexdump.o ihex.o $(COMPAT_OBJS)
+gcn64ctl_gui: gcn64ctl_gui.o gcn64.o gcn64lib.o mempak_old.o hexdump.o ihex.o $(COMPAT_OBJS)
 	$(LD) $^ $(LDFLAGS) $(GTK_LDFLAGS) -o $@
 
-gcn64ctl: main.o gcn64.o mempak.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o $(COMPAT_OBJS)
+gcn64ctl: main.o gcn64.o mempak_old.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o $(COMPAT_OBJS)
 	$(LD) $^ $(LDFLAGS) -o $@
 
 gcn64ctl_gui.o: gcn64ctl_gui.c
