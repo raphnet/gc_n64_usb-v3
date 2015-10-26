@@ -19,9 +19,11 @@ struct mpkedit_data *mpkedit_new(struct application *app)
 		return NULL;
 	}
 
-//	mpke->mpk = mempak_new();
-	mpke->mpk = mempak_loadFromFile("/home/raph/0Dream/programming/multiuse_pcbX/gc_n64_usb-v3/tmp/perfect_dark_b.N64");
-
+	mpke->mpk = mempak_new();
+	if (!mpke->mpk) {
+		free(mpke);
+		return NULL;
+	}
 
 	return mpke;
 }
@@ -31,6 +33,16 @@ void mpkedit_free(struct mpkedit_data *mpke)
 	if (mpke) {
 		free(mpke);
 	}
+}
+
+void mpke_replaceMpk(struct application *app, mempak_structure_t *mpk)
+{
+	if (app->mpke->mpk) {
+		mempak_free(app->mpke->mpk);
+	}
+
+	app->mpke->mpk = mpk;
+	mpke_syncModel(app);
 }
 
 void mpke_syncModel(struct application *app)
@@ -78,14 +90,44 @@ G_MODULE_EXPORT void mpke_new(GtkWidget *win, gpointer data)
 {
 	struct application *app = data;
 
-	mempak_free(app->mpke->mpk);
-	app->mpke->mpk = mempak_new();
-
-	mpke_syncModel(app);
+	mpke_replaceMpk(app, mempak_new());
 }
 
 G_MODULE_EXPORT void mpke_open(GtkWidget *win, gpointer data)
 {
+	struct application *app = data;
+	GtkWidget *dialog;
+	GET_UI_ELEMENT(GtkWindow, n64_mempak_window_editor);
+	GET_UI_ELEMENT(GtkFileFilter, n64_mempak_filter);
+	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+	int res;
+
+	dialog = gtk_file_chooser_dialog_new("Load N64 mempak image",
+										n64_mempak_window_editor,
+										action,
+										"_Cancel",
+										GTK_RESPONSE_CANCEL,
+										"_Open",
+										GTK_RESPONSE_ACCEPT,
+										NULL);
+
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), n64_mempak_filter);
+	res = gtk_dialog_run (GTK_DIALOG(dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		char *filename;
+		GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+		mempak_structure_t *mpk;
+
+		filename = gtk_file_chooser_get_filename(chooser);
+		mpk = mempak_loadFromFile(filename);
+		if (mpk) {
+			mpke_replaceMpk(app, mpk);
+		} else {
+			errorPopop(app, "Failed to load mempak");
+		}
+	}
+
+	gtk_widget_destroy(dialog);
 }
 
 G_MODULE_EXPORT void mpke_saveas(GtkWidget *win, gpointer data)

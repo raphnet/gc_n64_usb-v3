@@ -8,6 +8,8 @@
 #define GET_ELEMENT(TYPE, ELEMENT)	(TYPE *)gtk_builder_get_object(app->builder, #ELEMENT)
 #define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = GET_ELEMENT(TYPE, ELEMENT)
 
+void errorPopop(struct application *app, const char *message);
+
 struct application {
 	GtkBuilder *builder;
 	GtkWindow *mainwindow;

@@ -87,6 +87,17 @@ Author: Raphaël Assénat
     <property name="can_focus">False</property>
     <property name="stock">gtk-missing-image</property>
   </object>
+  <object class="GtkFileFilter" id="n64_mempak_filter">
+    <patterns>
+      <pattern>*.mpk</pattern>
+      <pattern>*.n64</pattern>
+    </patterns>
+  </object>
+  <object class="GtkFileFilter" id="n64_note_filter">
+    <patterns>
+      <pattern>*.note</pattern>
+    </patterns>
+  </object>
   <object class="GtkListStore" id="n64_notes">
     <columns>
       <!-- column-name Note -->
