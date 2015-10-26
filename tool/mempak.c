@@ -232,6 +232,7 @@ int mempak_exportNote(mempak_structure_t *mpk, int note_id, const char *dst_file
 int mempak_saveToFile(mempak_structure_t *mpk, const char *dst_filename, unsigned char format)
 {
 	FILE *fptr;
+	int i;
 
 	if (!mpk)
 		return -1;
@@ -265,8 +266,30 @@ int mempak_saveToFile(mempak_structure_t *mpk, const char *dst_filename, unsigne
 			// only look for the 123-456-STD header and then
 			// seek to the data.
 			//
-			// Real .N64 files contain more info. TODO: Support it
+			// Real .N64 files contain more info other info. Often
+			// 0x12: 01 00 00 03 03 03 03 03 03 03 03 03 03 03 03 03 03 03 03 00
+			//       ....
+			// 0x3F: 00
+			//
+			// Then at 0x40, there are 0x1000 bytes. I think there are 256
+			// bytes available for each of block. See comments in
+			// mempak_loadFromFile for more info.
 			fprintf(fptr, "123-456-STD");
+
+			fseek(fptr, DEXDRIVE_COMMENT_OFFSET, SEEK_SET);
+			for (i=0; i<MEMPAK_NUM_NOTES; i++) {
+				unsigned char tmp = 0;
+				fwrite(mpk->note_comments[i], 255, 1, fptr);
+				// I'm not sure about the exact convention of the
+				// original format. Is is that comments are zero-terminated,
+				// but if the length is 256 then non-terminated (implcit termination?)
+				//
+				// Just to make sure nothing crashes by loading a file generated
+				// by this tool, I make sure there is always a zero.
+				fwrite(&tmp, 1, 1, fptr);
+			}
+
+
 			fseek(fptr, DEXDRIVE_DATA_OFFSET, SEEK_SET);
 			fwrite(mpk->data, sizeof(mpk->data), 1, fptr);
 			break;

@@ -13,17 +13,18 @@ ifeq ($(shell uname -o), Msys)
 COMPAT_OBJS=sleep.o memmem.o
 endif
 
-CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags`
+CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99
 LDFLAGS=`pkg-config $(HIDAPI_NAME) --libs` -g
 GTK_CFLAGS=`pkg-config --cflags gtk+-3.0 gmodule-2.0`
 GTK_LDFLAGS=`pkg-config --libs gtk+-3.0 gmodule-2.0`
 
 PREFIX=/usr/local
 
+MEMPAKLIB_OBJS=mempak.o mempak_fs.o
 
 .PHONY : clean install
 
-all: gcn64ctl gcn64ctl_gui
+all: gcn64ctl gcn64ctl_gui mempak_ls mempak_format mempak_extract_note mempak_insert_note mempak_rm mempak_convert
 
 gcn64ctl_gui: gcn64ctl_gui.o gcn64.o gcn64lib.o mempak_old.o hexdump.o ihex.o $(COMPAT_OBJS)
 	$(LD) $^ $(LDFLAGS) $(GTK_LDFLAGS) -o $@
@@ -33,6 +34,25 @@ gcn64ctl: main.o gcn64.o mempak_old.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex
 
 gcn64ctl_gui.o: gcn64ctl_gui.c
 	$(CC) $(CFLAGS) $(GTK_CFLAGS) -c $<
+
+mempak_convert: mempak_convert.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
+mempak_rm: mempak_rm.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
+mempak_insert_note: mempak_insert_note.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
+mempak_extract_note: mempak_extract_note.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
+mempak_ls: mempak_ls.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
+mempak_format: mempak_format.o $(MEMPAKLIB_OBJS)
+	$(LD) $^ $(LDFLAGS) -o $@
+
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<

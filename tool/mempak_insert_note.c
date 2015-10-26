@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <getopt.h>
 #include "mempak.h"
 
@@ -25,7 +26,7 @@ int main(int argc, char **argv)
 		{ "dst", required_argument, 0, 'd' },
 		{ }, // terminator
 	};
-	const char *comment = "";
+	const char *comment = NULL;
 	int used_note_id = -1;
 	int dst_id = -1;
 
@@ -37,7 +38,7 @@ int main(int argc, char **argv)
 	while(1) {
 		int c;
 
-		c = getopt_long(argc, argv, "f:h", long_options, NULL);
+		c = getopt_long(argc, argv, "f:hc:d:", long_options, NULL);
 		if (c==-1)
 			break;
 
@@ -48,10 +49,17 @@ int main(int argc, char **argv)
 				return 0;
 			case 'c':
 				comment = optarg;
+				if (strlen(optarg) > (MAX_NOTE_COMMENT_SIZE-2)) {
+					fprintf(stderr, "Comment too long (%d characters max.)\n", (MAX_NOTE_COMMENT_SIZE-2));
+					return -1;
+				}
 				break;
 			case 'd':
 				dst_id = atoi(optarg);
 				break;
+			case '?':
+				fprintf(stderr, "Unknown argument. Try -h\n");
+				return -1;
 		}
 	}
 
@@ -72,6 +80,16 @@ int main(int argc, char **argv)
 	}
 
 	printf("Note imported and written to slot %d\n", used_note_id);
+
+	if (comment) {
+		if (mpk->file_format != MPK_FORMAT_N64) {
+			printf("Warning: Ignoring comment since it cannot be stored in %s file format. Use the N64 format instead.\n", mempak_format2string(mpk->file_format));
+		} else {
+			strncpy(mpk->note_comments[used_note_id], comment, MAX_NOTE_COMMENT_SIZE);
+			mpk->note_comments[used_note_id][256] = 0;
+			mpk->note_comments[used_note_id][255] = 0;
+		}
+	}
 
 	if (0 != mempak_saveToFile(mpk, pakfile, mpk->file_format)) {
 		fprintf(stderr, "could not write to memory pak file\n");
