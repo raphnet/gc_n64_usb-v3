@@ -44,8 +44,8 @@ static unsigned char _FFB_effect_index;
 #define LOOP_MAX    0xFFFF
 static unsigned int _loop_count;
 
-static unsigned char gamepad_report0[32];
-static unsigned char hid_report_data[32];
+static unsigned char gamepad_report0[REPORT_SIZE];
+static unsigned char hid_report_data[8]; // Used for force feedback
 
 void usbpad_init()
 {
