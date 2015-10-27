@@ -109,6 +109,7 @@ void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
 #define TIMING_OFFSET	100 // gives about 12uS. Twice the expected maximum bit period.
 #endif
 
+#if 1
 static unsigned int gcn64_receive()
 {
 	register unsigned int count=0;
@@ -179,7 +180,119 @@ static unsigned int gcn64_receive()
 
 	return count;
 }
+#endif
 
+static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
+{
+
+	// the value of the gpio is pre-configured to low. We simulate
+	// an open drain output by toggling the direction.
+#define PULL_DATA		"	sbi %0, "GCN64_BIT_NUM_S"\n"
+#define RELEASE_DATA	"	cbi %0, "GCN64_BIT_NUM_S"\n"
+
+	asm volatile(
+	"mov r23, %2	\n"
+    "tst r23			\n"
+    "breq done_send			\n"
+
+"send_next_byte:						\n"
+    "; Check if this is the last byte.						\n"
+    "tst r23						\n"
+    "breq send_stop						\n"
+    "dec r23						\n"
+    "ld r16, z+						\n"
+    "ldi r17, 0x80 ; mask						\n"
+
+"send_next_bit:						\n"
+    "mov r19, r16						\n"
+    "and r19, r17						\n"
+    "brne send1						\n"
+    "nop						\n"
+
+"send0:						\n"
+	PULL_DATA
+//    "sbi IO_DDRD, DATA_BIT   ; Pull bus to 0						\n"
+
+    "ldi r20, 15						\n"
+"lp_send0_3us:						\n"
+    "dec r20						\n"
+    "brne lp_send0_3us						\n"
+    "nop						\n"
+
+	RELEASE_DATA
+//    "cbi IO_DDRD, DATA_BIT   ; Release bus to 1						\n"
+    "lsr r17						\n"
+    "breq send_next_byte						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "rjmp send_next_bit						\n"
+
+"send1:						\n"
+	PULL_DATA
+//    "sbi IO_DDRD, DATA_BIT   ; Pull bus to 0						\n"
+
+    "ldi r20, 4						\n"
+"lp_send1_1us:						\n"
+    "dec r20						\n"
+    "brne lp_send1_1us						\n"
+    "nop						\n"
+    "nop						\n"
+
+	RELEASE_DATA
+//    "cbi IO_DDRD, DATA_BIT   ; Release bus to 1						\n"
+
+    "ldi r20, 10						\n"
+"lp_send1_3us:						\n"
+    "dec r20						\n"
+    "brne lp_send1_3us						\n"
+    "nop						\n"
+    "nop						\n"
+
+    "lsr r17						\n"
+    "breq send_next_byte						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "rjmp send_next_bit						\n"
+
+"send_stop:						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+    "nop						\n"
+
+"	; STOP BIT						\n"
+	PULL_DATA
+//"	sbi IO_DDRD, DATA_BIT ; Pull low for stop bit						\n"
+"	ldi r20, 4						\n"
+"stbdly0:						\n"
+"	dec r20						\n"
+"	brne stbdly0						\n"
+"	nop						\n"
+	RELEASE_DATA
+//"	cbi IO_DDRD, DATA_BIT ; Release						\n"
+
+"done_send:						\n"
+	:
+	: "I" (_SFR_IO_ADDR(GCN64_DATA_DDR)), // %0
+	  "z" ((unsigned char volatile *)gcn64_workbuf), // %1 (Z)
+	  "r" (n_bytes) // %2
+	: "r19","r16","r17","r20","r23" );
+
+}
+
+#if 0
 static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
 {
 	unsigned int bits;
@@ -289,7 +402,7 @@ static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
 	  "I" (_SFR_IO_ADDR(GCN64_DATA_PIN))	// %3
 	: "r16", "r17");
 }
-
+#endif
 
 /* \brief Decode the received length of low/high states to byte-per-bit format
  *
