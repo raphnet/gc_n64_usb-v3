@@ -30,7 +30,7 @@ uint16_t hiddata_get_report(struct usb_request *rq, const uint8_t **dat)
 		*dat = cmdbuf;
 		state = STATE_IDLE;
 #ifdef DEBUG
-		printf("hiddata idle, sent %d bytes\r\n", cmdbuf_len);
+		printf_P(PSTR("hiddata idle, sent %d bytes\r\n"), cmdbuf_len);
 #endif
 		return cmdbuf_len;
 	}
@@ -42,11 +42,11 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 {
 #ifdef DEBUG
 	int i;
-	printf("Set data %d\n", len);
+	printf_P(PSTR("Set data %d\n"), len);
 	for (i=0; i<len; i++) {
-		printf("0x%02x ", dat[i]);
+		printf_P(PSTR("0x%02x "), dat[i]);
 	}
-	printf("\r\n");
+	printf_P(PSTR("\r\n"));
 #endif
 
 	state = STATE_NEW_COMMAND;

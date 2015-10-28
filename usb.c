@@ -289,7 +289,7 @@ static void handleSetupPacket(struct usb_request *rq)
 
 
 							default:
-//								printf("Unhandled descriptor 0x%02x\n", rq->wValue>>8);
+//								printf_P(PSTR("Unhandled descriptor 0x%02x\n"), rq->wValue>>8);
 								unhandled = 1;
 						}
 						break;
@@ -332,8 +332,6 @@ static void handleSetupPacket(struct usb_request *rq)
 //												rqlen = g_params->hid_params[rq->wIndex].reportdesc_len;
 											};
 
-											// TODO : Without the delays those two printf add, it
-											// does not work. A handshake is missing.
 //											printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
 
 											while(1)
@@ -480,9 +478,9 @@ static void handleDataPacket(const struct usb_request *rq, uint8_t *dat, uint16_
 
 	printf_P(PSTR("Unhandled control write [%d] : "), len);
 	for (i=0; i<len; i++) {
-		printf("%02X ", dat[i]);
+		printf_P(PSTR("%02X "), dat[i]);
 	}
-	printf("\r\n");
+	printf_P(PSTR("\r\n"));
 }
 
 // Device interrupt
@@ -559,7 +557,7 @@ ISR(USB_COM_vect)
 			len = readEP2buf(g_ep0_buf);
 			UEINTX &= ~(1<<RXOUTI);
 			if (control_write_in_progress) {
-			//	printf("chunk: %d\r\n", len);
+			//	printf_P(PSTR("chunk: %d\r\n"), len);
 				if (control_write_len + len < CONTROL_WRITE_BUFSIZE) {
 					memcpy(control_write_buf + control_write_len, g_ep0_buf, len);
 					control_write_len += len;
@@ -570,7 +568,7 @@ ISR(USB_COM_vect)
 		if (i & (1<<NAKINI)) {
 			UEINTX &= ~(1<<NAKINI);
 			if (control_write_in_progress) {
-		//		printf("end. total: %d\n", control_write_len);
+		//		printf_P(PSTR("end. total: %d\n"), control_write_len);
 				handleDataPacket(&control_write_rq, control_write_buf, control_write_len);
 				control_write_in_progress = 0;
 			}
