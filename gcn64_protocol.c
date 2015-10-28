@@ -19,11 +19,12 @@
 #include <util/delay.h>
 
 #include "gcn64_protocol.h"
+#include "gcn64txrx.h"
 
 #undef FORCE_KEYBOARD
 
 #define GCN64_BUF_SIZE	600
-static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
+static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions and options **************/
 #ifndef STK525
@@ -32,45 +33,16 @@ static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 	#define GCN64_DATA_PIN	PIND
 	#define GCN64_DATA_BIT	(1<<0)
 	#define GCN64_BIT_NUM_S	"0" // for asm
-	#define FREQ_IS_16MHZ
-	#define DISABLE_INTS_DURING_COMM
 #else
 	#define GCN64_DATA_PORT	PORTA
 	#define GCN64_DATA_DDR	DDRA
 	#define GCN64_DATA_PIN	PINA
 	#define GCN64_DATA_BIT	(1<<0)
 	#define GCN64_BIT_NUM_S	"0" // for asm
-	#define FREQ_IS_16MHZ
-	#define DISABLE_INTS_DURING_COMM
 #endif
 
-/*
- * \brief Explode bytes to bits
- * \param bytes 	The input byte array
- * \param num_bytes	The number of input bytes
- * \param workbuf_bit_offset	The offset to start writing at
- * \return number of bits (i.e. written output bytes)
- *
- * 1 input byte = 8 output bytes, where each output byte is zero or non-zero depending
- * on the input byte bits, starting with the most significant one.
- */
-static int bitsToWorkbufBytes(unsigned char *bytes, int num_bytes, int workbuf_bit_offset)
-{
-	int i, bit;
-	unsigned char p;
+#define DISABLE_INTS_DURING_COMM
 
-	if (num_bytes * 8 > GCN64_BUF_SIZE)
-		return 0;
-
-	for (i=0,bit=0; i<num_bytes; i++) {
-		for (p=0x80; p; p>>=1) {
-			gcn64_workbuf[bit+workbuf_bit_offset] = bytes[i] & p;
-			bit++;
-		}
-	}
-
-	return bit;
-}
 
 /* Read a byte from the buffer (where 1 byte is 1 bit).
  * MSb first.
@@ -98,311 +70,6 @@ void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
 		dstbuf++;
 	}
 }
-
-// The bit timeout is a counter to 127. This is the 
-// start value. Counting from 0 takes hundreads of 
-// microseconds. Because of this, the reception function
-// "hangs in there" much longer than necessary..
-#ifdef FREQ_IS_16MHZ
-#define TIMING_OFFSET	75
-#else
-#define TIMING_OFFSET	100 // gives about 12uS. Twice the expected maximum bit period.
-#endif
-
-#if 1
-static unsigned int gcn64_receive()
-{
-	register unsigned int count=0;
-
-#define SET_DBG	"	nop\n"
-#define CLR_DBG	"	nop\n"
-//#define SET_DBG	"	sbi %3, 4		\n"
-//#define CLR_DBG	"	cbi %3, 4		\n"
-
-	// The data line has been released. 
-	// The receive part below expects it to be still high
-	// and will wait for it to become low before beginning
-	// the counting.
-	asm volatile(
-		"	push r30				\n"	// save Z
-		"	push r31				\n"	// save Z
-		"	clr r27					\n" // clear X (%0)
-		"	clr r26					\n"
-
-		"	clr r16					\n"
-"initial_wait_low:\n"
-		"	inc r16					\n"
-		"	breq timeout			\n" // overflow to 0
-		"	sbic %2, "GCN64_BIT_NUM_S"		\n"
-		"	rjmp initial_wait_low	\n"
-
-		// the next transition is to a high bit	
-		"	rjmp waithigh			\n"
-
-"waitlow:\n"
-		"	ldi r16, %4				\n"
-"waitlow_lp:\n"
-		"	inc r16					\n"
-		"	brmi timeout			\n" // > 127 (approx 50uS timeout)
-		"	sbic %2, "GCN64_BIT_NUM_S"			\n"
-		"	rjmp waitlow_lp			\n"
-
-		"	adiw %0, 1					\n" // count this timed low level
-		"	breq overflow			\n" // > 255
-		"	st z+,r16				\n"
-
-"waithigh:\n"
-		"	ldi r16, %4				\n"
-"waithigh_lp:\n"
-		"	inc r16					\n"
-		"	brmi timeout			\n" // > 127
-		"	sbis %2, "GCN64_BIT_NUM_S"		\n"
-		"	rjmp waithigh_lp		\n"
-		"	adiw %0, 1				\n" // count this timed high level
-
-		"	breq overflow			\n" // > 255
-		"	st z+,r16				\n"
-
-		"	rjmp waitlow			\n"
-
-"overflow:  \n"
-"timeout:	\n"
-"			pop r31				\n" // restore z
-"			pop r30				\n" // restore z
-
-		: 	"=&x" (count)						// %0
-		: 	"z" ((unsigned char volatile *)gcn64_workbuf),		// %1
-			"I" (_SFR_IO_ADDR(GCN64_DATA_PIN)),	// %2
-			"I" (_SFR_IO_ADDR(PORTB)),			// %3
-			"M" (TIMING_OFFSET)					// %4
-		: 	"r16","memory"
-	);
-
-	return count;
-}
-#endif
-
-static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
-{
-
-	// the value of the gpio is pre-configured to low. We simulate
-	// an open drain output by toggling the direction.
-#define PULL_DATA		"	sbi %0, "GCN64_BIT_NUM_S"\n"
-#define RELEASE_DATA	"	cbi %0, "GCN64_BIT_NUM_S"\n"
-
-	asm volatile(
-	"mov r23, %2	\n"
-    "tst r23			\n"
-    "breq done_send			\n"
-
-"send_next_byte:						\n"
-    "; Check if this is the last byte.						\n"
-    "tst r23						\n"
-    "breq send_stop						\n"
-    "dec r23						\n"
-    "ld r16, z+						\n"
-    "ldi r17, 0x80 ; mask						\n"
-
-"send_next_bit:						\n"
-    "mov r19, r16						\n"
-    "and r19, r17						\n"
-    "brne send1						\n"
-    "nop						\n"
-
-"send0:						\n"
-	PULL_DATA
-//    "sbi IO_DDRD, DATA_BIT   ; Pull bus to 0						\n"
-
-    "ldi r20, 15						\n"
-"lp_send0_3us:						\n"
-    "dec r20						\n"
-    "brne lp_send0_3us						\n"
-    "nop						\n"
-
-	RELEASE_DATA
-//    "cbi IO_DDRD, DATA_BIT   ; Release bus to 1						\n"
-    "lsr r17						\n"
-    "breq send_next_byte						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "rjmp send_next_bit						\n"
-
-"send1:						\n"
-	PULL_DATA
-//    "sbi IO_DDRD, DATA_BIT   ; Pull bus to 0						\n"
-
-    "ldi r20, 4						\n"
-"lp_send1_1us:						\n"
-    "dec r20						\n"
-    "brne lp_send1_1us						\n"
-    "nop						\n"
-    "nop						\n"
-
-	RELEASE_DATA
-//    "cbi IO_DDRD, DATA_BIT   ; Release bus to 1						\n"
-
-    "ldi r20, 10						\n"
-"lp_send1_3us:						\n"
-    "dec r20						\n"
-    "brne lp_send1_3us						\n"
-    "nop						\n"
-    "nop						\n"
-
-    "lsr r17						\n"
-    "breq send_next_byte						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "rjmp send_next_bit						\n"
-
-"send_stop:						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-    "nop						\n"
-
-"	; STOP BIT						\n"
-	PULL_DATA
-//"	sbi IO_DDRD, DATA_BIT ; Pull low for stop bit						\n"
-"	ldi r20, 4						\n"
-"stbdly0:						\n"
-"	dec r20						\n"
-"	brne stbdly0						\n"
-"	nop						\n"
-	RELEASE_DATA
-//"	cbi IO_DDRD, DATA_BIT ; Release						\n"
-
-"done_send:						\n"
-	:
-	: "I" (_SFR_IO_ADDR(GCN64_DATA_DDR)), // %0
-	  "z" ((unsigned char volatile *)gcn64_workbuf), // %1 (Z)
-	  "r" (n_bytes) // %2
-	: "r19","r16","r17","r20","r23" );
-
-}
-
-#if 0
-static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
-{
-	unsigned int bits;
-
-	if (n_bytes == 0)
-		return;
-
-	// Explode the data to one byte per bit for very easy transmission in assembly.
-	// This trades memory for ease of implementation.
-	bits = bitsToWorkbufBytes(data, n_bytes, 0);
-
-	// the value of the gpio is pre-configured to low. We simulate
-	// an open drain output by toggling the direction.
-#define PULL_DATA		"	sbi %0, "GCN64_BIT_NUM_S"\n"
-#define RELEASE_DATA	"	cbi %0, "GCN64_BIT_NUM_S"\n"
-
-#ifdef FREQ_IS_16MHZ
-	// busy looping delays based on busy loop and nop tuning.
-	// valid for 16Mhz clock. (Tuned to 1us/3us using a scope)
-#define DLY_SHORT_1ST	"ldi r17, 2\n nop\nrcall sb_dly%=\n "
-#define DLY_LARGE_1ST	"ldi r17, 13\n rcall sb_dly%=\n"
-#define DLY_SHORT_2ND	"nop\nnop\nnop\nnop\n" 
-#define DLY_LARGE_2ND	"ldi r17, 9\n rcall sb_dly%=\nnop\nnop\n"
-
-#else
-	// busy looping delays based on busy loop and nop tuning.
-	// valid for 12Mhz clock.
-#define DLY_SHORT_1ST	"ldi r17, 1\n rcall sb_dly%=\n "
-#define DLY_LARGE_1ST	"ldi r17, 9\n rcall sb_dly%=\n"
-#define DLY_SHORT_2ND	"\n" 
-#define DLY_LARGE_2ND	"ldi r17, 5\n rcall sb_dly%=\n nop\nnop\n"
-#endif
-
-	asm volatile(
-	// Save the modified input operands
-	"	push r28			\n" // y
-	"	push r29			\n"
-	"	push r30			\n" // z
-	"	push r31			\n"
-
-	"sb_loop%=:				\n"
-	"	ld r16, z+			\n"
-	"	tst r16				\n"
-	"	breq sb_send0%=		\n"
-	"	brne sb_send1%=		\n"
-
-	"	rjmp sb_end%=		\n" // not reached
-
-
-	"sb_send0%=:			\n"
-	"	nop					\n"
-	PULL_DATA
-	DLY_LARGE_1ST
-	RELEASE_DATA
-	DLY_SHORT_2ND
-	"	sbiw	%1, 1		\n"
-	"	brne sb_loop%=		\n"
-	"	rjmp sb_end%=		\n"
-
-	"sb_send1%=:			\n"
-	PULL_DATA
-	DLY_SHORT_1ST
-	RELEASE_DATA
-	DLY_LARGE_2ND
-	"	sbiw	%1, 1		\n"
-	"	brne sb_loop%=		\n"
-	"	rjmp sb_end%=		\n"
-
-// delay sub (arg r17)
-	"sb_dly%=:				\n"
-	"	dec r17				\n"
-	"	brne sb_dly%=		\n"
-	"	ret					\n"
-	
-
-	"sb_end%=:\n"
-	// going here is fast so we need to extend the last
-	// delay by 500nS
-	"	nop\n "
-#ifdef FREQ_IS_16MHZ
-	"	nop\n"
-#endif
-	"	pop r31				\n"
-	"	pop r30				\n"
-	PULL_DATA
-	"	pop r29				\n"
-	"	pop r28				\n"
-	//DLY_SHORT_1ST
-	"nop\nnop\nnop\nnop\n"
-	RELEASE_DATA
-
-	// Now, we need to loop until the wire is high to 
-	// prevent the reception code from thinking this is
-	// the beginning of the first reply bit.
-
-	"	ldi r16, 0xff		\n" // setup a timeout
-	"sb_waitHigh%=:			\n"
-	"	dec r16				\n" // decrement timeout
-	"	breq sb_wait_high_done%=		\n" // handle timeout condition
-	"	sbis %3, "GCN64_BIT_NUM_S"			\n" // Read the port
-	"	rjmp sb_waitHigh%=	\n"
-"sb_wait_high_done%=:\n"
-	:
-	: "I" (_SFR_IO_ADDR(GCN64_DATA_DDR)), // %0
-	  "w" (bits),						// %1
-	  "z" ((unsigned char volatile *)gcn64_workbuf),					// %2
-	  "I" (_SFR_IO_ADDR(GCN64_DATA_PIN))	// %3
-	: "r16", "r17");
-}
-#endif
 
 /* \brief Decode the received length of low/high states to byte-per-bit format
  *
@@ -484,7 +151,8 @@ int gcn64_transaction(unsigned char *data_out, int data_out_len)
 	cli();
 #endif
 	gcn64_sendBytes(data_out, data_out_len);
-	count = gcn64_receive();
+	//count = gcn64_receive();
+	count = gcn64_receiveBits(gcn64_workbuf, 0);
 	SREG = sreg;
 
 	if (!count)
@@ -612,5 +280,3 @@ int gcn64_detectController(void)
 
 	return 0;
 }
-
-
