@@ -309,12 +309,14 @@ int main(void)
 						pad->getReport(&pad_data);
 						usbpad_update(&pad_data);
 						state = STATE_WAIT_INTERRUPT_READY;
+						break;
 					}
 				} else {
 					/* Just make sure the gamepad state holds valid data
 					 * to appear inactive (no buttons and axes in neutral) */
 					usbpad_update(NULL);
 				}
+				state = STATE_WAIT_POLLTIME;
 				break;
 
 			case STATE_WAIT_INTERRUPT_READY:
