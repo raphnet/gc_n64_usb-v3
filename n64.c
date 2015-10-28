@@ -36,13 +36,6 @@ static char must_rumble = 0;
 static char force_rumble = 0;
 #endif
 
-
-/* What was most recently read from the controller */
-static gamepad_data last_built_report;
-
-/* What was most recently reported through getReport */
-static gamepad_data last_sent_report;
-
 static void n64Init(void)
 {
 	n64Update();

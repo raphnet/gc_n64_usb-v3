@@ -32,12 +32,6 @@ static void gamecubeInit(void);
 static char gamecubeUpdate(void);
 static char gamecubeChanged(void);
 
-/* What was most recently read from the controller */
-static gamepad_data last_built_report;
-
-/* What was most recently sent to the host */
-static gamepad_data last_sent_report;
-
 static char gc_rumbling = 0;
 static char origins_set = 0;
 static unsigned char orig_x, orig_y, orig_cx, orig_cy;

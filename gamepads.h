@@ -80,6 +80,12 @@ typedef struct {
 	char (*probe)(void); /* return true if found */
 } Gamepad;
 
+/* What was most recently read from the controller */
+extern gamepad_data last_built_report;
+
+/* What was most recently sent to the host */
+extern gamepad_data last_sent_report;
+
 #endif // _gamepads_h__
 
 
