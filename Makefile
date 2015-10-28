@@ -38,6 +38,9 @@ flash: $(HEXFILE)
 	./enter_bootloader.sh
 	./wait_then_flash.sh $(CPU) $(HEXFILE)
 
+justflash: $(HEXFILE)
+	./wait_then_flash.sh $(CPU) $(HEXFILE)
+
 chip_erase:
 	dfu-programmer atmega32u2 erase
 
