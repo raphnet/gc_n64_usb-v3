@@ -23,7 +23,7 @@
 
 #undef FORCE_KEYBOARD
 
-#define GCN64_BUF_SIZE	600
+#define GCN64_BUF_SIZE	320 // Supports up to 39 bytes
 static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions and options **************/
