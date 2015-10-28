@@ -7,7 +7,8 @@
 #include "gcn64_protocol.h"
 #include "version.h"
 
-#define CMDBUF_SIZE	64
+// dataHidReport is 40 bytes.
+#define CMDBUF_SIZE	41
 
 #define STATE_IDLE			0
 #define STATE_NEW_COMMAND	1	// New command in buffer
@@ -105,6 +106,10 @@ static void hiddata_processCommandBuffer(void)
 			// Answer: RQ, version string (zero-terminated)
 			strcpy((char*)(cmdbuf + 1), g_version);
 			cmdbuf_len = 1 + strlen(g_version) + 1;
+			break;
+		case RQ_GCN64_GET_SIGNATURE:
+			strcpy_P((char*)(cmdbuf + 1), g_signature);
+			cmdbuf_len = 1 + strlen_P(g_version) + 1;
 			break;
 	}
 
