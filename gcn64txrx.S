@@ -77,7 +77,8 @@ waitlow_lp:
 	rjmp waitlow_lp
 
 	adiw xl, 1					; count this bit
-	breq overflow			 	; > 255
+	; TODO : Check maximum size
+	;breq overflow			 	; > 255
 
 #if 0
 	st z+, r19
@@ -105,7 +106,8 @@ waithigh_lp:
 
 timeout_waitlow:
 	adiw xl, 1					;
-	breq overflow			 	; > 255
+	; TODO : Check maximum size
+	;breq overflow			 	; > 255
 
 	; Compare the low period and the high period.
 	sub r19, r21
