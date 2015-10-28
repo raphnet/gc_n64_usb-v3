@@ -10,6 +10,7 @@
 #define yh  r29
 #define zl  r30
 #define zh  r31
+#define __zero_reg__	r1
 
 /* the value of the gpio is pre-configured to low. We simulate
 	an open drain output by toggling the direction */
@@ -29,12 +30,22 @@
 #error Only 16MHz clock supported
 #endif
 
+	/************************************************
+	* Function gcn64_receiveBits
+    *
+    * Works by timing the low and high periods of each bit and
+	* then comparing them to know if a 1 or a 0 was on the wire.
+	*
+	* Example timed values:
+	* 54 4e 53 4d 53 4d 53 4e 53 4d 4d 53 53 4e 4c 54 53 4d 54 4d 53 4d 53 4d ...
+	*   0     0     0     0     0     1     0     1     0     0     0     0  ....
+	*/
+
 	; The bit timeout is a counter to 127. This is the
 	; start value. Counting from 0 takes hundreads of
 	; microseconds. Because of this, the reception function
 	; "hangs in there" much longer than necessary..
 #define TIMING_OFFSET	75
-
 	; unsigned int gcn64_receiveBytes(unsigned char *dstbuf, unsigned char max_bytes);
 	; r24,r25 : dstbuf
 	; r22 : max bytes (for fututre use)
@@ -44,8 +55,9 @@ gcn64_receiveBits:
 	clr xh
 	mov zl, r24
 	mov zh, r25
-
 	clr r18
+	clr r20
+	inc r20
 initial_wait_low:
 	inc r18
 	breq timeout	; overflow to 0
@@ -56,33 +68,60 @@ initial_wait_low:
 	rjmp waithigh
 
 waitlow:
+	mov r21, r18 ; Save the last value
 	ldi r18, TIMING_OFFSET
 waitlow_lp:
 	inc r18
-	brmi timeout				; > 127 (approx 50uS timeout)
+	brmi timeout_waitlow		; > 127 (approx 50uS timeout)
 	sbic GCN64_DATA_PIN, GCN64_DATA_BIT
 	rjmp waitlow_lp
 
-	adiw xl, 1					; count this timed low level
+	adiw xl, 1					; count this bit
 	breq overflow			 	; > 255
-	st z+,r18
+
+#if 0
+	st z+, r19
+	st z+, r18
+	rjmp waithigh
+#else
+	; Compare the low period and the high period.
+	sub r19, r18
+	brcs got1
+got0:
+	st z+, __zero_reg__
+	rjmp waithigh
+got1:
+	st z+,r20
+#endif
 
 waithigh:
-	ldi r18, TIMING_OFFSET
+	ldi r19, TIMING_OFFSET
 waithigh_lp:
-	inc r18
+	inc r19
 	brmi timeout			 	; > 127
 	sbis GCN64_DATA_PIN, GCN64_DATA_BIT
 	rjmp waithigh_lp
-	adiw xl, 1				 	; count this timed high level
-
-	breq overflow			 	; > 255
-	st z+,r18
-
 	rjmp waitlow
 
+timeout_waitlow:
+	adiw xl, 1					;
+	breq overflow			 	; > 255
+
+	; Compare the low period and the high period.
+	sub r19, r21
+	brcs lastwas1
+lastwas0:
+	st z+, __zero_reg__
+	rjmp rxdone
+lastwas1:
+	st z+,r20
+	rjmp rxdone
+
 overflow:
+	clr xl
+	clr xh
 timeout:
+rxdone:
 	; Return the number if received bits in r24,r25
 	mov r24, xl ; yl
 	mov r25, xh ; yh

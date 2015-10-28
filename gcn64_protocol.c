@@ -71,54 +71,6 @@ void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
 	}
 }
 
-/* \brief Decode the received length of low/high states to byte-per-bit format
- *
- * The result is in workbuf.
- *
- **/
-static void gcn64_decodeWorkbuf(unsigned int count)
-{
-	unsigned int i;
-	volatile unsigned char *output = gcn64_workbuf;
-	volatile unsigned char *input = gcn64_workbuf;
-	unsigned char t;
-
-    //  
-    //          ________
-    // ________/
-    //  
-    //   [i*2]    [i*2+1]
-    //  
-    //          ________________
-    // 0 : ____/
-    //                      ____
-    // 1 : ________________/
-    //  
-    // The timings on a real N64 are
-    //  
-    // 0 : 1 us low, 3 us high
-    // 1 : 3 us low, 1 us high
-    //  
-    // However, HORI pads use something similar to
-    //  
-    // 0 : 1.5 us low, 4.5 us high
-    // 1 : 4.5 us low, 1.5 us high
-    //  
-    //  
-    // No64 us = microseconds
-
-	// This operation takes approximately 100uS on 64bit gamecube messages
-	for (i=0; i<count; i++) {
-		t = *input; 
-		input++;
-
-		*output = t < *input;
-
-		input++;
-		output++;
-	}
-}
-
 void gcn64protocol_hwinit(void)
 {
 	// data as input
@@ -133,8 +85,6 @@ void gcn64protocol_hwinit(void)
 	PORTB &= ~0x10;
 }
 
-
-
 /**
  * \brief Send n data bytes + stop bit, wait for answer.
  * \return The number of bits received, 0 on timeout/error.
@@ -146,21 +96,27 @@ int gcn64_transaction(unsigned char *data_out, int data_out_len)
 {
 	int count;
 	unsigned char sreg = SREG;
+	int i;
 
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
 #endif
 	gcn64_sendBytes(data_out, data_out_len);
-	//count = gcn64_receive();
 	count = gcn64_receiveBits(gcn64_workbuf, 0);
 	SREG = sreg;
-
+#if 0
+	printf("Count: %d { ", count);
+	for (i=0; i<count; i++) {
+		printf("%02x ", gcn64_workbuf[i]);
+	}
+	printf("}\r\n");
+#endif
 	if (!count)
 		return 0;
 
 	if (!(count & 0x01)) {
 		// If we don't get an odd number of level lengths from gcn64_receive
-		// something is wrong. 
+		// something is wrong.
 		//
 		// The stop bit is a short (~1us) low state followed by an "infinite"
 		// high state, which timeouts and lets the function return. This
@@ -168,15 +124,13 @@ int gcn64_transaction(unsigned char *data_out, int data_out_len)
 		return 0;
 	}
 
-	gcn64_decodeWorkbuf(count);
-	
 	/* this delay is required on N64 controllers. Otherwise, after sending
 	 * a rumble-on or rumble-off command (probably init too), the following
-	 * get status fails. This starts to work at 2us. 5 should be safe. */
-	_delay_us(5);
-	
-	/* return the number of full bits received. */
-	return (count-1) / 2;
+	 * get status fails. This starts to work at 30us. 60us should be safe. */
+	_delay_us(60); // Note that this results in a 100us delay between packets.
+
+	/* return the number of full bits received, minus the stop bit */
+	return count-1;
 }
 
 
