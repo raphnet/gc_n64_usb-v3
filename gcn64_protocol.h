@@ -161,9 +161,6 @@
 
 void gcn64protocol_hwinit(void);
 int gcn64_detectController(void);
-int gcn64_transaction(unsigned char *data_out, int data_out_len);
-
-unsigned char gcn64_protocol_getByte(int offset);
-void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf);
+unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max);
 
 #endif // _gcn64_protocol_h__

@@ -53,13 +53,14 @@ unsigned char tmpdata[40];
 static char initRumble(void)
 {
 	int count;
+	unsigned char data[4];
 
 	tmpdata[0] = N64_EXPANSION_WRITE;
 	tmpdata[1] = 0x80;
 	tmpdata[2] = 0x01;
 	memset(tmpdata+3, 0x80, 32);
 
-	count = gcn64_transaction(tmpdata, 35);
+	count = gcn64_transaction(tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
@@ -69,12 +70,13 @@ static char initRumble(void)
 static char controlRumble(char enable)
 {
 	int count;
+	unsigned char data[4];
 
 	tmpdata[0] = N64_EXPANSION_WRITE;
 	tmpdata[1] = 0xc0;
 	tmpdata[2] = 0x1b;
 	memset(tmpdata+3, enable ? 0x01 : 0x00, 32);
-	count = gcn64_transaction(tmpdata, 35);
+	count = gcn64_transaction(tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
@@ -86,7 +88,8 @@ static char n64Update(void)
 	unsigned char count;
 	unsigned char x,y;
 	unsigned char btns1, btns2;
-	unsigned char caps[3];
+	unsigned char caps[N64_CAPS_REPLY_LENGTH];
+	unsigned char status[N64_GET_STATUS_REPLY_LENGTH];
 
 	/* Pad answer to N64_GET_CAPABILITIES
 	 *
@@ -98,17 +101,13 @@ static char n64Update(void)
 	 * Bit 1 tells is if there was something connected that has been removed.
 	 */
 	tmpdata[0] = N64_GET_CAPABILITIES;
-	count = gcn64_transaction(tmpdata, 1);
+	count = gcn64_transaction(tmpdata, 1, caps, sizeof(caps));
 	if (count != N64_CAPS_REPLY_LENGTH) {
 		// a failed read could mean the pack or controller was gone. Init
 		// will be necessary next time we detect a pack is present.
 		n64_rumble_state = RSTATE_INIT;
 		return -1;
 	}
-
-	caps[0] = gcn64_protocol_getByte(0);
-	caps[1] = gcn64_protocol_getByte(8);
-	caps[2] = gcn64_protocol_getByte(16);
 
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
 	if ((caps[2] & 0x01) && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
@@ -173,7 +172,7 @@ static char n64Update(void)
 	}
 
 	tmpdata[0] = N64_GET_STATUS;
-	count = gcn64_transaction(tmpdata, 1);
+	count = gcn64_transaction(tmpdata, 1, status, sizeof(status));
 	if (count != N64_GET_STATUS_REPLY_LENGTH) {
 		return -1;
 	}
@@ -200,10 +199,10 @@ static char n64Update(void)
 	24-31: analog Y axis
  */
 
-	btns1 = gcn64_protocol_getByte(0);
-	btns2 = gcn64_protocol_getByte(8);
-	x = gcn64_protocol_getByte(16); // X axis
-	y = gcn64_protocol_getByte(24); // Y axis
+	btns1 = status[0];
+	btns2 = status[1];
+	x = status[2];
+	y = status[3];
 
 #ifdef BUTTON_A_RUMBLE_TEST
 	if (btns1 & 0x80) {
@@ -256,6 +255,7 @@ static char n64Probe(void)
 	int count;
 	char i;
 	unsigned char tmp;
+	unsigned char data[4];
 
 	/* Pad answer to N64_GET_CAPABILITIES
 	 *
@@ -274,7 +274,7 @@ static char n64Probe(void)
 		_delay_ms(30);
 
 		tmp = N64_GET_CAPABILITIES;
-		count = gcn64_transaction(&tmp, 1);
+		count = gcn64_transaction(&tmp, 1, data, sizeof(data));
 
 		if (count == N64_CAPS_REPLY_LENGTH) {
 			return 1;

@@ -1,7 +1,7 @@
 #ifndef _gcn64txrx_h__
 #define _gcn64txrx_h__
 
-void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes);
+void gcn64_sendBytes(const unsigned char *data, unsigned char n_bytes);
 
 /**
  * \brief Receive up to \max_bytes bytes

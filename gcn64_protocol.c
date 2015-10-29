@@ -25,9 +25,6 @@
 
 #undef FORCE_KEYBOARD
 
-#define GCN64_BUF_SIZE	40
-static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
-
 /******** IO port definitions and options **************/
 #ifndef STK525
 	#define GCN64_DATA_PORT	PORTD
@@ -44,20 +41,6 @@ static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 #endif
 
 #define DISABLE_INTS_DURING_COMM
-
-
-/* Read a byte from the buffer (where 1 byte is 1 bit).
- * MSb first.
- */
-unsigned char gcn64_protocol_getByte(int offset)
-{
-	return gcn64_workbuf[offset/8];
-}
-
-void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
-{
-	memcpy(dstbuf, gcn64_workbuf + offset/8, n_bytes);
-}
 
 void gcn64protocol_hwinit(void)
 {
@@ -79,22 +62,22 @@ void gcn64protocol_hwinit(void)
  *
  * The result is in gcn64_workbuf.
  */
-int gcn64_transaction(unsigned char *data_out, int data_out_len)
+unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max)
 {
 	int count;
 	unsigned char sreg = SREG;
-//	int i;
+	//int i;
 
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
 #endif
-	gcn64_sendBytes(data_out, data_out_len);
-	count = gcn64_receiveBytes(gcn64_workbuf, 0);
+	gcn64_sendBytes(tx, tx_len);
+	count = gcn64_receiveBytes(rx, rx_max);
 	SREG = sreg;
 #if 0
 	printf("Count: %d { ", count);
 	for (i=0; i<count; i++) {
-		printf("%02x ", gcn64_workbuf[i]);
+		printf("%02x ", rx[i]);
 	}
 	printf("}\r\n");
 #endif
@@ -123,8 +106,9 @@ int gcn64_detectController(void)
 	unsigned char tmp = GC_GETID;
 	unsigned char count;
 	unsigned short id;
+	unsigned char data[4];
 
-	count = gcn64_transaction(&tmp, 1);
+	count = gcn64_transaction(&tmp, 1, data, sizeof(data));
 	if (count == 0) {
 		return CONTROLLER_IS_ABSENT;
 	}
@@ -132,7 +116,7 @@ int gcn64_detectController(void)
 		return CONTROLLER_IS_UNKNOWN;
 	}
 
-	/* 
+	/*
 	 * -- Standard gamecube controller answer:
 	 * 0000 1001 0000 0000 0010 0011  : 0x090023  or
 	 * 0000 1001 0000 0000 0010 0000  : 0x090020
@@ -145,13 +129,13 @@ int gcn64_detectController(void)
 	 *
 	 * 1110 1001 1010 0000 0001 0111 : 0xE9A017
 	 * (controller on)
-	 * 
+	 *
 	 * 1010 1000 0000
 	 *
 	 * -- Intec wireless gamecube controller
 	 * 0000 1001 0000 0000 0010 0000 : 0x090020
 	 *
-	 * 
+	 *
 	 * -- Standard N64 controller
 	 * 0000 0101 0000 0000 0000 0000 : 0x050000 (no pack)
 	 * 0000 0101 0000 0000 0000 0001 : 0x050001 With expansion pack
@@ -164,8 +148,8 @@ int gcn64_detectController(void)
 	 * gamecube compatible controller is present. If on the other hand
 	 * we have a 5, then we are communicating with a N64 controller.
 	 *
-	 * This conclusion appears to be corroborated by my old printout of 
-	 * the document named "Yet another gamecube documentation (but one 
+	 * This conclusion appears to be corroborated by my old printout of
+	 * the document named "Yet another gamecube documentation (but one
 	 * that's worth printing). The document explains that and ID can
 	 * be read by sending what they call the 'SI command 0x00 to
 	 * which the controller replies with 3 bytes. (Clearly, that's
@@ -186,8 +170,7 @@ int gcn64_detectController(void)
 	 *
 	 * */
 
-	id = gcn64_protocol_getByte(0)<<8;
-	id |= gcn64_protocol_getByte(8);
+	id = (data[0]<<8) | data[1];
 
 #ifdef FORCE_KEYBOARD
 	return CONTROLLER_IS_GC_KEYBOARD;
@@ -209,7 +192,7 @@ int gcn64_detectController(void)
 			// wavebird, controller off.
 			return CONTROLLER_IS_GC;
 
-		default: 
+		default:
 			return CONTROLLER_IS_UNKNOWN;
 	}
 

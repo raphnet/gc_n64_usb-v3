@@ -78,8 +78,7 @@ static void hiddata_processCommandBuffer(void)
 			// TODO : Range checking
 			// cmdbuf[] : RQ, CHN, LEN, data[]
 			channel = cmdbuf[1];
-			cmdbuf_len = gcn64_transaction(cmdbuf+3, cmdbuf[2]);
-			gcn64_protocol_getBytes(0, cmdbuf_len, cmdbuf + 3);
+			cmdbuf_len = gcn64_transaction(cmdbuf+3, cmdbuf[2], cmdbuf + 3, CMDBUF_SIZE-3);
 			cmdbuf[2] = cmdbuf_len;
 			cmdbuf_len += 3; // Answer: RQ, CHN, LEN, data[]
 			break;

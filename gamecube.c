@@ -41,7 +41,7 @@ static void gamecubeInit(void)
 	gamecubeUpdate();
 }
 
-void gc_decodeAnswer()
+void gc_decodeAnswer(unsigned char data[8])
 {
 	unsigned char x,y,cx,cy;
 
@@ -87,14 +87,14 @@ void gc_decodeAnswer()
  */
 
 	last_built_report.pad_type = PAD_TYPE_GAMECUBE;
-	last_built_report.gc.buttons = gcn64_protocol_getByte(0) | gcn64_protocol_getByte(8) << 8;
-	x = gcn64_protocol_getByte(16);
-	y = gcn64_protocol_getByte(24);
-	cx = gcn64_protocol_getByte(32);
-	cy = gcn64_protocol_getByte(40);
-	last_built_report.gc.lt = gcn64_protocol_getByte(48);
-	last_built_report.gc.rt = gcn64_protocol_getByte(56);
-	gcn64_protocol_getBytes(0, 8, last_built_report.gc.raw_data);
+	last_built_report.gc.buttons = data[0] | data[1] << 8;
+	x = data[2];
+	y = data[3];
+	cx = data[4];
+	cy = data[5];
+	last_built_report.gc.lt = data[6];
+	last_built_report.gc.rt = data[7];
+	memcpy(last_built_report.gc.raw_data, data, 8);
 
 	if (origins_set) {
 		last_built_report.gc.x = ((int)x-(int)orig_x);
@@ -117,8 +117,7 @@ void gc_decodeAnswer()
 
 static char gamecubeUpdate()
 {
-	//unsigned char tmp=0;
-	unsigned char tmpdata[8];
+	unsigned char tmpdata[GC_GETSTATUS_REPLY_LENGTH];
 	unsigned char count;
 
 #if 0
@@ -147,12 +146,12 @@ static char gamecubeUpdate()
 	tmpdata[1] = GC_GETSTATUS2;
 	tmpdata[2] = GC_GETSTATUS3(gc_rumbling);
 
-	count = gcn64_transaction(tmpdata, 3);
+	count = gcn64_transaction(tmpdata, 3, tmpdata, GC_GETSTATUS_REPLY_LENGTH);
 	if (count != GC_GETSTATUS_REPLY_LENGTH) {
 		return 1;
 	}
 
-	gc_decodeAnswer();
+	gc_decodeAnswer(tmpdata);
 
 	return 0;
 }

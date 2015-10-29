@@ -222,10 +222,12 @@ Gamepad *detectPad(void)
 			return NULL;
 
 		case CONTROLLER_IS_N64:
+			printf("Detected N64 controller\n");
 			return n64GetGamepad();
 			break;
 
 		case CONTROLLER_IS_GC:
+			printf("Detected GC controller\n");
 			return gamecubeGetGamepad();
 	}
 
