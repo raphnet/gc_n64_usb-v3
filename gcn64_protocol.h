@@ -11,14 +11,14 @@
 /* Return many unknown bits, but two are about the expansion port. */
 #define N64_GET_CAPABILITIES		0x00
 #define N64_RESET					0xFF
-#define N64_CAPS_REPLY_LENGTH		24
+#define N64_CAPS_REPLY_LENGTH		3
 
 #define OFFSET_EXT_REMOVED			22
 #define OFFSET_EXT_PRESENT			23
 
 /* Returns button states and axis values */
 #define N64_GET_STATUS				0x01
-#define N64_GET_STATUS_REPLY_LENGTH	32
+#define N64_GET_STATUS_REPLY_LENGTH	4
 
 /* Read from the expansion bus. */
 #define N64_EXPANSION_READ			0x02
@@ -28,14 +28,14 @@
 
 /* Return information about controller. */
 #define GC_GETID					0x00
-#define GC_GETID_REPLY_LENGTH		24
+#define GC_GETID_REPLY_LENGTH		3
 
 /* 3-byte get status command. Returns axis and buttons. Also 
  * controls motor. */
 #define GC_GETSTATUS1				0x40
 #define GC_GETSTATUS2				0x03
 #define GC_GETSTATUS3(rumbling)		((rumbling) ? 0x01 : 0x00)
-#define GC_GETSTATUS_REPLY_LENGTH	64
+#define GC_GETSTATUS_REPLY_LENGTH	8
 
 /* 3-byte poll keyboard command.
  * Source: http://hitmen.c02.at/files/yagcd/yagcd/chap9.html#sec9.3.3

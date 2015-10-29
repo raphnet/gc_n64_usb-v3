@@ -2,7 +2,7 @@
 
 .text
 .global gcn64_sendBytes
-.global gcn64_receiveBits
+.global gcn64_receiveBytes
 
 #define xl  r26
 #define xh  r27
@@ -50,14 +50,14 @@
 	; r24,r25 : dstbuf
 	; r22 : max bytes (for fututre use)
 	; return: count in r24,r25
-gcn64_receiveBits:
+gcn64_receiveBytes:
 	clr xl
 	clr xh
 	mov zl, r24
 	mov zh, r25
 	clr r18
-	clr r20
-	inc r20
+	ldi r20, 1
+	clr r24
 initial_wait_low:
 	inc r18
 	breq timeout	; overflow to 0
@@ -72,61 +72,40 @@ waitlow:
 	ldi r18, TIMING_OFFSET
 waitlow_lp:
 	inc r18
-	brmi timeout_waitlow		; > 127 (approx 50uS timeout)
+	brmi rxdone		; > 127 (approx 50uS timeout)
 	sbic GCN64_DATA_PIN, GCN64_DATA_BIT
 	rjmp waitlow_lp
 
-	adiw xl, 1					; count this bit
-	; TODO : Check maximum size
-	;breq overflow			 	; > 255
-
-#if 0
-	st z+, r19
-	st z+, r18
-	rjmp waithigh
-#else
 	; Compare the low period and the high period.
-	sub r19, r18
-	brcs got1
-got0:
-	st z+, __zero_reg__
+	sub r19, r18 ; Carry is set when 1
+	rol r20
+	brcs store_byte
 	rjmp waithigh
-got1:
+
+store_byte:
+	inc r24 ; Count byte
+	breq overflow ; TODO : Check against r22
 	st z+,r20
-#endif
+	ldi r20, 1
 
 waithigh:
 	ldi r19, TIMING_OFFSET
 waithigh_lp:
 	inc r19
-	brmi timeout			 	; > 127
+	brmi frame_error ; This means the line is stuck in a low state...
 	sbis GCN64_DATA_PIN, GCN64_DATA_BIT
 	rjmp waithigh_lp
 	rjmp waitlow
 
-timeout_waitlow:
-	adiw xl, 1					;
-	; TODO : Check maximum size
-	;breq overflow			 	; > 255
-
-	; Compare the low period and the high period.
-	sub r19, r21
-	brcs lastwas1
-lastwas0:
-	st z+, __zero_reg__
-	rjmp rxdone
-lastwas1:
-	st z+,r20
-	rjmp rxdone
-
-overflow:
-	clr xl
-	clr xh
 timeout:
+	tst r24
+	breq rxdone ; If r24 is still zero, we did not receive anything. Return 0.
+	; Otherwise, it is a frame error (i.e. A partial byte was received)
+frame_error:
+overflow: ; Treat overflow as an error as well
+	ser r24
 rxdone:
-	; Return the number if received bits in r24,r25
-	mov r24, xl ; yl
-	mov r25, xh ; yh
+	; Return the number if received bits in r24
 	ret
 
 

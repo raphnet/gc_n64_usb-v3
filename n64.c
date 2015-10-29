@@ -59,9 +59,8 @@ static char initRumble(void)
 	tmpdata[2] = 0x01;
 	memset(tmpdata+3, 0x80, 32);
 
-	/* Note: The old test (count > 0) was not reliable. */
 	count = gcn64_transaction(tmpdata, 35);
-	if (count == 8)
+	if (count == 1)
 		return 0;
 
 	return -1;
@@ -76,7 +75,7 @@ static char controlRumble(char enable)
 	tmpdata[2] = 0x1b;
 	memset(tmpdata+3, enable ? 0x01 : 0x00, 32);
 	count = gcn64_transaction(tmpdata, 35);
-	if (count == 8)
+	if (count == 1)
 		return 0;
 
 	return -1;

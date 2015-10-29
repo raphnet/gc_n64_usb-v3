@@ -14,16 +14,18 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <string.h>
 
 #include "gcn64_protocol.h"
 #include "gcn64txrx.h"
 
 #undef FORCE_KEYBOARD
 
-#define GCN64_BUF_SIZE	320 // Supports up to 39 bytes
+#define GCN64_BUF_SIZE	40
 static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions and options **************/
@@ -49,26 +51,12 @@ static unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
  */
 unsigned char gcn64_protocol_getByte(int offset)
 {
-	unsigned char val, b;
-	unsigned char volatile *addr = gcn64_workbuf + offset;
-
-	for (b=0x80, val=0; b; b>>=1)
-	{
-		if (*addr)
-			val |= b;
-		addr++;
-	}
-	return val;
+	return gcn64_workbuf[offset/8];
 }
 
 void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
 {
-	int i;
-
-	for (i=0; i<n_bytes; i++) {
-		*dstbuf = gcn64_protocol_getByte(offset + (i*8));
-		dstbuf++;
-	}
+	memcpy(dstbuf, gcn64_workbuf + offset/8, n_bytes);
 }
 
 void gcn64protocol_hwinit(void)
@@ -87,22 +75,21 @@ void gcn64protocol_hwinit(void)
 
 /**
  * \brief Send n data bytes + stop bit, wait for answer.
- * \return The number of bits received, 0 on timeout/error.
+ * \return The number of bytes received, 0 on timeout/error.
  *
- * The result is in gcn64_workbuf, where each byte represents
- * a bit.
+ * The result is in gcn64_workbuf.
  */
 int gcn64_transaction(unsigned char *data_out, int data_out_len)
 {
 	int count;
 	unsigned char sreg = SREG;
-	int i;
+//	int i;
 
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
 #endif
 	gcn64_sendBytes(data_out, data_out_len);
-	count = gcn64_receiveBits(gcn64_workbuf, 0);
+	count = gcn64_receiveBytes(gcn64_workbuf, 0);
 	SREG = sreg;
 #if 0
 	printf("Count: %d { ", count);
@@ -114,23 +101,17 @@ int gcn64_transaction(unsigned char *data_out, int data_out_len)
 	if (!count)
 		return 0;
 
-	if (!(count & 0x01)) {
-		// If we don't get an odd number of level lengths from gcn64_receive
-		// something is wrong.
-		//
-		// The stop bit is a short (~1us) low state followed by an "infinite"
-		// high state, which timeouts and lets the function return. This
-		// is why we should receive and odd number of lengths.
+	if (count == 0xff) {
+		printf("rx error\n");
 		return 0;
 	}
 
 	/* this delay is required on N64 controllers. Otherwise, after sending
 	 * a rumble-on or rumble-off command (probably init too), the following
 	 * get status fails. This starts to work at 30us. 60us should be safe. */
-	_delay_us(60); // Note that this results in a 100us delay between packets.
+	_delay_us(80); // Note that this results in a ~100us delay between packets.
 
-	/* return the number of full bits received, minus the stop bit */
-	return count-1;
+	return count;
 }
 
 
@@ -140,14 +121,14 @@ int gcn64_transaction(unsigned char *data_out, int data_out_len)
 int gcn64_detectController(void)
 {
 	unsigned char tmp = GC_GETID;
-	int count;
+	unsigned char count;
 	unsigned short id;
 
 	count = gcn64_transaction(&tmp, 1);
 	if (count == 0) {
 		return CONTROLLER_IS_ABSENT;
 	}
-	if (count != 24) {
+	if (count != GC_GETID_REPLY_LENGTH) {
 		return CONTROLLER_IS_UNKNOWN;
 	}
 

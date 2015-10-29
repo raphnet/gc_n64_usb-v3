@@ -58,7 +58,6 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 
 static void hiddata_processCommandBuffer(void)
 {
-	int bits;
 	unsigned char channel;
 #ifdef DEBUG
 	int i;
@@ -79,8 +78,7 @@ static void hiddata_processCommandBuffer(void)
 			// TODO : Range checking
 			// cmdbuf[] : RQ, CHN, LEN, data[]
 			channel = cmdbuf[1];
-			bits = gcn64_transaction(cmdbuf+3, cmdbuf[2]);
-			cmdbuf_len = bits / 8; // The above return a number of bits
+			cmdbuf_len = gcn64_transaction(cmdbuf+3, cmdbuf[2]);
 			gcn64_protocol_getBytes(0, cmdbuf_len, cmdbuf + 3);
 			cmdbuf[2] = cmdbuf_len;
 			cmdbuf_len += 3; // Answer: RQ, CHN, LEN, data[]
