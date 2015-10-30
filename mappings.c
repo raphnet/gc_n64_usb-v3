@@ -1,3 +1,4 @@
+#include <avr/pgmspace.h>
 #include "mappings.h"
 #include "gamepads.h"
 #include "usbpad.h"
@@ -10,7 +11,7 @@
  *  - Similar layout for GC Y/X and N64 C-Left and C-Down
  */
 
-static struct mapping map_gc_default[] = {
+const static struct mapping map_gc_default[] PROGMEM = {
 	{ GC_BTN_A,		USB_BTN(0) },
 	{ GC_BTN_B,		USB_BTN(1) },
 	{ GC_BTN_Z,		USB_BTN(2) },
@@ -30,7 +31,7 @@ static struct mapping map_gc_default[] = {
 	{	} /* terminator */
 };
 
-static struct mapping map_n64_default[] = {
+const static struct mapping map_n64_default[] PROGMEM = {
 	{ N64_BTN_A,			USB_BTN(0) },
 	{ N64_BTN_B,			USB_BTN(1) },
 	{ N64_BTN_Z,			USB_BTN(2) },
@@ -56,10 +57,17 @@ static uint16_t domap(const struct mapping *map, uint16_t input)
 {
 	const struct mapping *cur = map;
 	uint16_t out = 0;
+	uint16_t ctl_btn, usb_btn;
 
-	while (cur->ctl_btn && cur->usb_btn) {
-		if (input & cur->ctl_btn) {
-			out |= cur->usb_btn;
+	while (1) {
+		ctl_btn = pgm_read_word(&cur->ctl_btn);
+		usb_btn = pgm_read_word(&cur->usb_btn);
+
+		if (!ctl_btn || !usb_btn)
+			break;
+
+		if (input & ctl_btn) {
+			out |= usb_btn;
 		}
 		cur++;
 	}
