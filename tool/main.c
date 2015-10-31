@@ -53,11 +53,13 @@ static void printUsage(void)
 	printf("  --get_serial                       Read serial from eeprom\n");
 	printf("  --set_poll_rate ms                 Set time between controller polls in milliseconds\n");
 	printf("  --get_poll_rate                    Read configured poll rate\n");
+	printf("  --get_controller_type              Display the type of controller currently connected\n");
 	printf("\n");
 	printf("Advanced commands:\n");
 	printf("  --bootloader                       Re-enumerate in bootloader mode\n");
 	printf("  --suspend_polling                  Stop polling the controller\n");
 	printf("  --resume_polling                   Re-start polling the controller\n");
+	printf("  --get_signature                    Get the firmware signature\n");
 	printf("\n");
 	printf("Raw controller commands:\n");
 	printf("  --n64_getstatus                    Read N64 controller status now\n");
@@ -113,7 +115,9 @@ static void printUsage(void)
 #define OPT_GC_TO_N64_READ_MAPPING		320
 #define OPT_GC_TO_N64_LOAD_MAPPING		321
 #define OPT_GC_TO_N64_STORE_CURRENT_MAPPING	322
-#define OPT_GET_VERSION				323
+#define OPT_GET_VERSION					323
+#define OPT_GET_SIGNATURE				324
+#define OPT_GET_CTLTYPE					325
 
 struct option longopts[] = {
 	{ "help", 0, NULL, 'h' },
@@ -147,6 +151,8 @@ struct option longopts[] = {
 	{ "gc_to_n64_store_current_mapping", 1, NULL, OPT_GC_TO_N64_STORE_CURRENT_MAPPING },
 	{ "nonstop", 0, NULL, OPT_NONSTOP },
 	{ "get_version", 0, NULL, OPT_GET_VERSION },
+	{ "get_signature", 0, NULL, OPT_GET_SIGNATURE },
+	{ "get_controller_type", 0, NULL, OPT_GET_CTLTYPE },
 	{ },
 };
 
@@ -497,6 +503,24 @@ int main(int argc, char **argv)
 					if (0 == gcn64lib_getVersion(hdl, version, sizeof(version))) {
 						printf("Firmware version: %s\n", version);
 					}
+				}
+				break;
+
+			case OPT_GET_SIGNATURE:
+				{
+					char sig[64];
+
+					if (0 == gcn64lib_getSignature(hdl, sig, sizeof(sig))) {
+						printf("Signature: %s\n", sig);
+					}
+				}
+				break;
+
+			case OPT_GET_CTLTYPE:
+				{
+					int type;
+					type = gcn64lib_getControllerType(hdl, 0);
+					printf("Controller type 0x%02x: %s\n", type, gcn64lib_controllerName(type));
 				}
 				break;
 		}

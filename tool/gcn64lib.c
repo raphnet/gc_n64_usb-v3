@@ -66,7 +66,59 @@ int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax)
 
 	cmd[0] = RQ_GCN64_GET_VERSION;
 
+	n = gcn64_exchange(hdl, cmd, 1, cmd, sizeof(cmd));
+	if (n<0)
+		return n;
+
+	dst[0] = 0;
+	if (n > 1) {
+		strncpy(dst, (char*)cmd+1, n);
+	}
+	dst[dstmax-1] = 0;
+
+	return 0;
+}
+
+int gcn64lib_getControllerType(gcn64_hdl_t hdl, int chn)
+{
+	unsigned char cmd[32];
+	int n;
+
+	cmd[0] = RQ_GCN64_GET_CONTROLLER_TYPE;
+	cmd[1] = chn;
+
 	n = gcn64_exchange(hdl, cmd, 2, cmd, sizeof(cmd));
+	if (n<0)
+		return n;
+	if (n<3)
+		return -1;
+
+	return cmd[2];
+}
+
+const char *gcn64lib_controllerName(int type)
+{
+	switch(type) {
+		case CTL_TYPE_NONE: return "No controller";
+		case CTL_TYPE_N64: return "N64 Controller";
+		case CTL_TYPE_GC: return "GC Controller";
+		case CTL_TYPE_GCKB: return "GC Keyboard";
+		default:
+			return "Unknown";
+	}
+}
+
+int gcn64lib_getSignature(gcn64_hdl_t hdl, char *dst, int dstmax)
+{
+	unsigned char cmd[32];
+	int n;
+
+	if (dstmax <= 0)
+		return -1;
+
+	cmd[0] = RQ_GCN64_GET_SIGNATURE;
+
+	n = gcn64_exchange(hdl, cmd, 1, cmd, sizeof(cmd));
 	if (n<0)
 		return n;
 
