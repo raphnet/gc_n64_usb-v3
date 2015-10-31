@@ -348,10 +348,12 @@ static void updateGuiFromAdapter(struct application *app)
 		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkToggleButton, chkbtn_gc_invert_trig) },
 		{ },
 	};
+	int controller_type;
 	GET_UI_ELEMENT(GtkLabel, label_product_name);
 	GET_UI_ELEMENT(GtkLabel, label_firmware_version);
 	GET_UI_ELEMENT(GtkLabel, label_usb_id);
 	GET_UI_ELEMENT(GtkLabel, label_device_path);
+	GET_UI_ELEMENT(GtkLabel, label_controller_type);
 	int i;
 	struct gcn64_info *info = &app->current_adapter_info;
 
@@ -389,6 +391,11 @@ static void updateGuiFromAdapter(struct application *app)
 	gtk_label_set_text(label_usb_id, (char*)buf);
 
 	gtk_label_set_text(label_device_path, info->str_path);
+
+	controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
+	gtk_label_set_text(label_controller_type, gcn64lib_controllerName(controller_type));
+
+
 }
 
 G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)

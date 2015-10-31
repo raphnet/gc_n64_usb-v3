@@ -188,7 +188,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Open mempak editor</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="gtk_widget_show" object="n64_mempak_editor_window" swapped="yes"/>
+                        <signal name="activate" handler="gtk_widget_show" object="win_mempak_edit" swapped="yes"/>
                       </object>
                     </child>
                   </object>
@@ -392,6 +392,29 @@ Author: Raphaël Assénat
                           <packing>
                             <property name="left_attach">1</property>
                             <property name="top_attach">3</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="label11">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="halign">end</property>
+                            <property name="label" translatable="yes">Controller type:</property>
+                            <property name="justify">right</property>
+                          </object>
+                          <packing>
+                            <property name="left_attach">0</property>
+                            <property name="top_attach">4</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="label_controller_type">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="top_attach">4</property>
                           </packing>
                         </child>
                       </object>
@@ -817,8 +840,9 @@ Author: Raphaël Assénat
       <action-widget response="1">update_cancel_button</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkWindow" id="n64_mempak_editor_window">
+  <object class="GtkWindow" id="win_mempak_edit">
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">N64 Mempak editor</property>
     <property name="destroy_with_parent">True</property>
     <property name="attached_to">mainWindow</property>
     <signal name="delete-event" handler="gtk_widget_hide" swapped="no"/>
@@ -828,6 +852,7 @@ Author: Raphaël Assénat
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkMenuBar" id="menubar2">
@@ -896,7 +921,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="gtk_widget_hide" object="n64_mempak_editor_window" swapped="yes"/>
+                        <signal name="activate" handler="gtk_widget_hide" object="win_mempak_edit" swapped="yes"/>
                       </object>
                     </child>
                   </object>
@@ -956,6 +981,7 @@ Author: Raphaël Assénat
           <object class="GtkTreeView" id="n64_notes_treeview">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="vexpand">True</property>
             <property name="model">n64_notes</property>
             <property name="enable_search">False</property>
             <property name="enable_grid_lines">both</property>
@@ -979,6 +1005,7 @@ Author: Raphaël Assénat
               <object class="GtkTreeViewColumn" id="treeviewcolumn2">
                 <property name="resizable">True</property>
                 <property name="title" translatable="yes">Game Data</property>
+                <property name="expand">True</property>
                 <child>
                   <object class="GtkCellRendererText" id="cellrenderertext4"/>
                   <attributes>
@@ -1005,6 +1032,25 @@ Author: Raphaël Assénat
             <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkStatusbar" id="mempak_status_bar">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_left">10</property>
+            <property name="margin_right">10</property>
+            <property name="margin_start">10</property>
+            <property name="margin_end">10</property>
+            <property name="margin_top">6</property>
+            <property name="margin_bottom">6</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">2</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
           </packing>
         </child>
       </object>

@@ -55,6 +55,7 @@ static int mempak_findFreeNote(mempak_structure_t *mpk, entry_structure_t *entry
  * \param notefile The filename of the note to load
  * \param dst_note_id 0-15: (Over)write to specific note, -1: auto (first free)
  * \param note_id Stores the id of the note that was used
+ * \return -1: Error, -2: Not enough space in mempak
  */
 int mempak_importNote(mempak_structure_t *mpk, const char *notefile, int dst_note_id, int *note_id)
 {
@@ -128,7 +129,7 @@ int mempak_importNote(mempak_structure_t *mpk, const char *notefile, int dst_not
 			fprintf(stderr, "Not enough space (note is %d blocks and only %d free blocks in mempak)\n",
 				entry.blocks, free_blocks);
 			fclose(fptr);
-			return -1;
+			return -2;
 		}
 
 		data = calloc(1, entry.blocks * MEMPAK_BLOCK_SIZE);
