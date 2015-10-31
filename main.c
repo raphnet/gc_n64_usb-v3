@@ -5,6 +5,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
+#include "main.h"
 #include "util.h"
 #include "usart1.h"
 #include "usb.h"
@@ -209,13 +210,13 @@ void hwinit(void)
 
 #define NUM_PAD_TYPES	2
 
+unsigned char current_pad_type = CONTROLLER_IS_ABSENT;
+
 Gamepad *detectPad(void)
 {
-	char type;
+	current_pad_type = gcn64_detectController();
 
-	type = gcn64_detectController();
-
-	switch (type)
+	switch (current_pad_type)
 	{
 		case CONTROLLER_IS_ABSENT:
 		case CONTROLLER_IS_UNKNOWN:

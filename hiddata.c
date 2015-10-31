@@ -6,6 +6,7 @@
 #include "bootloader.h"
 #include "gcn64_protocol.h"
 #include "version.h"
+#include "main.h"
 
 // dataHidReport is 40 bytes.
 #define CMDBUF_SIZE	41
@@ -106,7 +107,13 @@ static void hiddata_processCommandBuffer(void)
 			break;
 		case RQ_GCN64_GET_SIGNATURE:
 			strcpy_P((char*)(cmdbuf + 1), g_signature);
-			cmdbuf_len = 1 + strlen_P(g_version) + 1;
+			cmdbuf_len = 1 + strlen_P(g_signature) + 1;
+			break;
+		case RQ_GCN64_GET_CONTROLLER_TYPE:
+			// CMD : RQ, CHN
+			// Answer: RQ, CHN, TYPE
+			cmdbuf[2] = current_pad_type;
+			cmdbuf_len = 3;
 			break;
 	}
 
