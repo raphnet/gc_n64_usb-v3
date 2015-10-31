@@ -26,6 +26,7 @@
 #include "reportdesc.c"
 #include "dataHidReport.c"
 
+#define MAX_READ_ERRORS	30
 
 struct cfg0 {
 	struct usb_configuration_descriptor configdesc;
@@ -269,6 +270,7 @@ int main(void)
 	gamepad_data pad_data;
 	unsigned char gamepad_vibrate = 0;
 	unsigned char state = STATE_WAIT_POLLTIME;
+	int error_count;
 
 	hwinit();
 	usart1_init();
@@ -305,7 +307,17 @@ int main(void)
 					pad = detectPad();
 				}
 				if (pad) {
-					pad->update();
+					if (pad->update()) {
+						error_count++;
+						if (error_count > MAX_READ_ERRORS) {
+							pad = NULL;
+							state = STATE_WAIT_POLLTIME;
+							error_count = 0;
+							break;
+						}
+					} else {
+						error_count=0;
+					}
 
 					if (pad->changed()) {
 
