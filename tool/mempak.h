@@ -26,6 +26,7 @@ int mempak_exportNote(mempak_structure_t *mpk, int note_id, const char *dst_file
 int mempak_importNote(mempak_structure_t *mpk, const char *notefile, int dst_note_id, int *note_id);
 void mempak_free(mempak_structure_t *mpk);
 
+int mempak_getFilenameFormat(const char *filename);
 int mempak_string2format(const char *str);
 const char *mempak_format2string(int fmt);
 

@@ -1,7 +1,9 @@
+#define _GNU_SOURCE // for strcasestr
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <libgen.h>
 #include "mempak.h"
 
 #define DEXDRIVE_DATA_OFFSET	0x1040
@@ -295,6 +297,7 @@ int mempak_saveToFile(mempak_structure_t *mpk, const char *dst_filename, unsigne
 			break;
 	}
 
+	fclose(fptr);
 	return 0;
 }
 
@@ -409,6 +412,22 @@ int mempak_string2format(const char *str)
 
 	if (0 == strcasecmp(str, "n64"))
 		return MPK_FORMAT_N64;
+
+	return MPK_FORMAT_INVALID;
+}
+
+int mempak_getFilenameFormat(const char *filename)
+{
+	char *s;
+
+	if ((s = strcasestr(filename, ".N64"))) {
+		if (s[4] == 0)
+			return MPK_FORMAT_N64;
+	}
+	if ((s = strcasestr(filename, ".MPK"))) {
+		if (s[4] == 0)
+			return MPK_FORMAT_MPK4;
+	}
 
 	return MPK_FORMAT_INVALID;
 }
