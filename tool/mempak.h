@@ -1,6 +1,7 @@
 #ifndef _mempak_h__
 #define _mempak_h__
 
+#define MEMPAK_MEM_SIZE		0x8000
 #define MEMPAK_NUM_NOTES	16
 
 #define MAX_NOTE_COMMENT_SIZE	257 // including 0 termination
@@ -12,7 +13,7 @@
 
 typedef struct mempak_structure
 {
-	unsigned char data[0x8000];
+	unsigned char data[MEMPAK_MEM_SIZE];
 	unsigned char file_format;
 
 	char note_comments[MEMPAK_NUM_NOTES][MAX_NOTE_COMMENT_SIZE];
@@ -29,6 +30,7 @@ void mempak_free(mempak_structure_t *mpk);
 int mempak_getFilenameFormat(const char *filename);
 int mempak_string2format(const char *str);
 const char *mempak_format2string(int fmt);
+int mempak_hexdump(mempak_structure_t *pak);
 
 #include "mempak_fs.h"
 

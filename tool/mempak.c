@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <ctype.h>
 #include <libgen.h>
 #include "mempak.h"
 
@@ -431,5 +432,25 @@ int mempak_getFilenameFormat(const char *filename)
 	}
 
 	return MPK_FORMAT_INVALID;
+}
+
+int mempak_hexdump(mempak_structure_t *pak)
+{
+	int i,j;
+
+	for (i=0; i<MEMPAK_MEM_SIZE; i+=0x20) {
+		printf("%04x: ", i);
+		for (j=0; j<0x20; j++) {
+			printf("%02x ", pak->data[i+j]);
+		}
+		printf("    ");
+
+		for (j=0; j<0x20; j++) {
+			printf("%c", isprint(pak->data[i+j]) ? pak->data[i+j] : '.' );
+		}
+		printf("\n");
+	}
+
+	return 0;
 }
 
