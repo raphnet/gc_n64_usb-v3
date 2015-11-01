@@ -29,7 +29,8 @@
 #include "gcn64.h"
 #include "gcn64lib.h"
 #include "gc2n64_adapter.h"
-#include "mempak_old.h"
+#include "mempak.h"
+#include "mempak_gcn64usb.h"
 #include "../requests.h"
 #include "../gcn64_protocol.h"
 
@@ -155,6 +156,16 @@ struct option longopts[] = {
 	{ "get_controller_type", 0, NULL, OPT_GET_CTLTYPE },
 	{ },
 };
+
+static void mempak_read_progress_cb(int addr)
+{
+	printf("\rReading address 0x%04x / 0x%04x  ", addr, MEMPAK_MEM_SIZE); fflush(stdout);
+}
+
+static void mempak_write_progress_cb(int addr)
+{
+	printf("\rWriting address 0x%04x / 0x%04x  ", addr, MEMPAK_MEM_SIZE); fflush(stdout);
+}
 
 static int listDevices(void)
 {
@@ -368,16 +379,82 @@ int main(int argc, char **argv)
 				break;
 
 			case OPT_N64_MEMPAK_DUMP:
-				if (outfile) {
-					mempak_dumpToFile(hdl, outfile);
-				} else {
-					mempak_dump(hdl);
+				{
+					mempak_structure_t *pak;
+					int res;
+
+					printf("Reading mempak...\n");
+					res = gcn64lib_mempak_download(hdl, 0, &pak, mempak_read_progress_cb);
+					printf("\n");
+					switch (res)
+					{
+						case 0:
+							if (outfile) {
+								int file_format;
+
+								file_format = mempak_getFilenameFormat(outfile);
+								if (file_format == MPK_FORMAT_INVALID) {
+									fprintf(stderr, "Unknown file format (neither .MPK nor .N64). Not saving.\n");
+								} else {
+									if (0 == mempak_saveToFile(pak, outfile, file_format)) {
+										printf("Wrote file '%s' in %s format\n", outfile, mempak_format2string(file_format));
+									} else {
+										fprintf(stderr, "error writing file\n");
+									}
+								}
+							} else { // No outfile
+								mempak_hexdump(pak);
+							}
+							mempak_free(pak);
+							break;
+						case -1:
+							fprintf(stderr, "No mempak detected\n");
+							break;
+						case -2:
+							fprintf(stderr, "I/O error reading pak\n");
+							break;
+						default:
+						case -3:
+							fprintf(stderr, "Error\n");
+							break;
+
+					}
+
 				}
 				break;
 
 			case OPT_N64_MEMPAK_WRITE:
-				printf("Input file: %s\n", optarg);
-				mempak_writeFromFile(hdl, optarg);
+				{
+					mempak_structure_t *pak;
+					int res;
+					printf("Input file: %s\n", optarg);
+
+					pak = mempak_loadFromFile(optarg);
+					if (!pak) {
+						fprintf(stderr, "Failed to load mempak\n");
+						return -1;
+					}
+
+					printf("Writing to mempak...\n");
+					res = gcn64lib_mempak_upload(hdl, 0, pak, mempak_write_progress_cb);
+					printf("\n");
+					if (res) {
+						switch(res)
+						{
+							case -1:
+								fprintf(stderr, "Error: No mempak detected.\n");
+								break;
+							case -2:
+								fprintf(stderr, "I/O error writing to pak.\n");
+								break;
+							default:
+								fprintf(stderr, "Error uploading mempak\n");
+						}
+					} else {
+						printf("Mempak uploaded\n");
+					}
+					mempak_free(pak);
+				}
 				break;
 
 			case OPT_SI8BIT_SCAN:
