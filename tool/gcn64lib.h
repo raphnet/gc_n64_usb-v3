@@ -18,6 +18,8 @@ int gcn64lib_getControllerType(gcn64_hdl_t hdl, int chn);
 const char *gcn64lib_controllerName(int type);
 int gcn64lib_bootloader(gcn64_hdl_t hdl);
 
+int gcn64lib_n64_expansionWrite(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32]);
+
 int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max);
 int gcn64lib_16bit_scan(gcn64_hdl_t hdl, unsigned short min, unsigned short max);
 

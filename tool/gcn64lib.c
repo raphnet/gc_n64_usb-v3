@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "gcn64lib.h"
 #include "../requests.h"
+#include "../gcn64_protocol.h"
 #include "hexdump.h"
 
 int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, unsigned char rx_max)
@@ -200,4 +201,26 @@ int gcn64lib_bootloader(gcn64_hdl_t hdl)
 
 	return 0;
 }
+
+int gcn64lib_expansionWrite(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32])
+{
+	unsigned char cmd[40];
+	int cmdlen;
+	int n;
+
+	cmd[0] = N64_EXPANSION_WRITE;
+	cmd[1] = addr>>8; // Address high byte
+	cmd[2] = addr&0xff; // Address low byte
+	memcpy(cmd + 3, data, 0x20);
+	cmdlen = 3 + 0x20;
+
+	n = gcn64lib_rawSiCommand(hdl, 0, cmd, cmdlen, cmd, sizeof(cmd));
+	if (n != 1) {
+		printf("write block returned != 1 (%d)\n", n);
+		return -1;
+	}
+
+	return cmd[0];
+}
+
 
