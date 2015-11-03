@@ -1,0 +1,9 @@
+- October 2, 2015 : Version 3.0.0
+  Initial release:
+  - Gamecube and N64 controller support
+  - Rumble support
+  - Raw N64/GC controller bus access
+  - N64 mempak support
+  - Firmware update support
+  - Adjustable polling rate (down to 1ms)
+
