@@ -4,8 +4,10 @@
 #include <string.h>
 #include "../requests.h"
 #include "ihex.h"
-
+#include "mempak.h"
 #include "gcn64ctl_gui.h"
+#include "mempak_gcn64usb.h"
+#include "gcn64lib.h"
 
 static void updateGuiFromAdapter(struct application *app);
 gboolean rebuild_device_list_store(gpointer data);
@@ -566,6 +568,56 @@ G_MODULE_EXPORT void onFileRescan(GtkWidget *wid, gpointer data)
 	rebuild_device_list_store(data);
 }
 
+static void mempak_io_progress_cb(int progress, void *ctx)
+{
+	struct application *app = ctx;
+	GET_UI_ELEMENT(GtkProgressBar, mempak_io_progress);
+	gdouble fract;
+
+	fract = progress/MEMPAK_BLOCK_SIZE;
+
+	gtk_progress_bar_set_fraction(mempak_io_progress, progress/((gdouble)MEMPAK_MEM_SIZE));
+	while (gtk_events_pending()) {
+		gtk_main_iteration_do(FALSE);
+	}
+
+}
+
+G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkWindow, win_mempak_edit);
+	GET_UI_ELEMENT(GtkDialog, mempak_io_dialog);
+	GET_UI_ELEMENT(GtkLabel, mempak_op_label);
+	mempak_structure_t *mpk;
+	int res;
+
+	printf("N64 read mempak\n");
+	if (!app->current_adapter_handle)
+		return;
+
+	gtk_widget_show(GTK_WIDGET(mempak_io_dialog));
+	gtk_label_set_text(mempak_op_label, "Reading memory pack...");
+
+	res = gcn64lib_mempak_download(app->current_adapter_handle, 0, &mpk, mempak_io_progress_cb, app);
+
+	gtk_widget_hide(GTK_WIDGET(mempak_io_dialog));
+	if (res != 0) {
+		switch(res)
+		{
+			case -1: errorPopop(app, "No mempak detected"); break;
+			case -2: errorPopop(app, "I/O error reading mempak"); break;
+			default:
+			case -3: errorPopop(app, "Error reading mempak"); break;
+		}
+	}
+	else {
+		mpke_replaceMpk(app, mpk, NULL);
+		gtk_widget_show(GTK_WIDGET(win_mempak_edit));
+	}
+}
+
+
 int
 main( int    argc,
       char **argv )
@@ -597,9 +649,6 @@ main( int    argc,
     /* Connect signals */
     gtk_builder_connect_signals( app.builder, &app );
 
-    /* Destroy builder, since we don't need it anymore */
-//    g_object_unref( G_OBJECT( builder ) );
-
     /* Show window. All other widgets are automatically shown by GtkBuilder */
     gtk_widget_show( GTK_WIDGET(window) );
 
@@ -610,4 +659,3 @@ main( int    argc,
 
     return( 0 );
 }
-

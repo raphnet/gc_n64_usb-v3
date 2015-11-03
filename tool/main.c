@@ -157,14 +157,9 @@ struct option longopts[] = {
 	{ },
 };
 
-static void mempak_read_progress_cb(int addr)
+static void mempak_progress_cb(int addr, void *ctx)
 {
-	printf("\rReading address 0x%04x / 0x%04x  ", addr, MEMPAK_MEM_SIZE); fflush(stdout);
-}
-
-static void mempak_write_progress_cb(int addr)
-{
-	printf("\rWriting address 0x%04x / 0x%04x  ", addr, MEMPAK_MEM_SIZE); fflush(stdout);
+	printf("\r%s 0x%04x / 0x%04x  ", (char*)ctx, addr, MEMPAK_MEM_SIZE); fflush(stdout);
 }
 
 static int listDevices(void)
@@ -384,7 +379,7 @@ int main(int argc, char **argv)
 					int res;
 
 					printf("Reading mempak...\n");
-					res = gcn64lib_mempak_download(hdl, 0, &pak, mempak_read_progress_cb);
+					res = gcn64lib_mempak_download(hdl, 0, &pak, mempak_progress_cb, "Reading address");
 					printf("\n");
 					switch (res)
 					{
@@ -436,7 +431,7 @@ int main(int argc, char **argv)
 					}
 
 					printf("Writing to mempak...\n");
-					res = gcn64lib_mempak_upload(hdl, 0, pak, mempak_write_progress_cb);
+					res = gcn64lib_mempak_upload(hdl, 0, pak, mempak_progress_cb, "Writing address");
 					printf("\n");
 					if (res) {
 						switch(res)

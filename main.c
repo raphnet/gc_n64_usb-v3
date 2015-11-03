@@ -270,7 +270,7 @@ int main(void)
 	gamepad_data pad_data;
 	unsigned char gamepad_vibrate = 0;
 	unsigned char state = STATE_WAIT_POLLTIME;
-	int error_count;
+	int error_count=0;
 
 	hwinit();
 	usart1_init();

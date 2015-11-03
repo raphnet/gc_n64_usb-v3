@@ -28,8 +28,6 @@ void intervaltimer_set(int interval_ms)
 
 char intervaltimer_get(void)
 {
-	char a;
-
 	if (TIFR1 & (1<<OCF1A)) {
 		TIFR1 = 1<<OCF1A;
 		return 1;
