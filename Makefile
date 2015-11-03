@@ -4,7 +4,7 @@ LD=$(CC)
 
 include Makefile.inc
 
-PROGNAME=n64
+PROGNAME=gcn64usb
 OBJDIR=objs-$(PROGNAME)
 CPU=atmega32u2
 CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT -DVERSIONSTR=$(VERSIONSTR)
