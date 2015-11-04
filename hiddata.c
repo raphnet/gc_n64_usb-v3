@@ -45,7 +45,7 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 	int i;
 	printf_P(PSTR("Set data %d\n"), len);
 	for (i=0; i<len; i++) {
-		printf_P(PSTR("0x%02x "), dat[i]);
+		printf_P(PSTR("%02x "), dat[i]);
 	}
 	printf_P(PSTR("\r\n"));
 #endif
@@ -120,7 +120,7 @@ static void hiddata_processCommandBuffer(void)
 #ifdef DEBUG
 	printf("Pending data %d\n", cmdbuf_len);
 	for (i=0; i<cmdbuf_len; i++) {
-		printf("0x%02x ", cmdbuf[i]);
+		printf("%02x ", cmdbuf[i]);
 	}
 	printf("\r\n");
 #endif
