@@ -1,0 +1,2 @@
+ATTR{idVendor}=="03eb", ATTR{idProduct}=="2ff0", MODE="0664", GROUP="plugdev" # ATmega32U2 DFU
+ATTR{idVendor}=="03eb", ATTR{idProduct}=="2ffb", MODE="0664", GROUP="plugdev" # AT90USB128 DFU
