@@ -400,6 +400,19 @@ static void updateGuiFromAdapter(struct application *app)
 
 }
 
+gboolean periodic_updater(gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkLabel, label_controller_type);
+	int controller_type;
+
+	if (app->current_adapter_handle) {
+		controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
+		gtk_label_set_text(label_controller_type, gcn64lib_controllerName(controller_type));
+	}
+	return TRUE;
+}
+
 G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
 {
 	struct application *app = data;
@@ -654,6 +667,8 @@ main( int    argc,
 
     /* Connect signals */
     gtk_builder_connect_signals( app.builder, &app );
+
+	g_timeout_add_seconds(1, periodic_updater, &app);
 
     /* Show window. All other widgets are automatically shown by GtkBuilder */
     gtk_widget_show( GTK_WIDGET(window) );
