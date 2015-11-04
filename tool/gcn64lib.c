@@ -111,7 +111,7 @@ const char *gcn64lib_controllerName(int type)
 
 int gcn64lib_getSignature(gcn64_hdl_t hdl, char *dst, int dstmax)
 {
-	unsigned char cmd[32];
+	unsigned char cmd[40];
 	int n;
 
 	if (dstmax <= 0)
