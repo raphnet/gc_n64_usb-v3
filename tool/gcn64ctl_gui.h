@@ -8,7 +8,7 @@
 #define GET_ELEMENT(TYPE, ELEMENT)	(TYPE *)gtk_builder_get_object(app->builder, #ELEMENT)
 #define GET_UI_ELEMENT(TYPE, ELEMENT)   TYPE *ELEMENT = GET_ELEMENT(TYPE, ELEMENT)
 
-void errorPopop(struct application *app, const char *message);
+void errorPopup(struct application *app, const char *message);
 
 struct application {
 	GtkBuilder *builder;
@@ -24,6 +24,7 @@ struct application {
 	int update_dialog_response;
 
 	struct mpkedit_data *mpke;
+	int stop_reading_mempak;
 };
 
 

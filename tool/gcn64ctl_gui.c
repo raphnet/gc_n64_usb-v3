@@ -210,7 +210,7 @@ void deselect_adapter(struct application *app)
 	gtk_combo_box_set_active_iter(cb_adapter_list, NULL);
 }
 
-void infoPopop(struct application *app, const char *message)
+void infoPopup(struct application *app, const char *message)
 {
 	GtkWidget *dialog;
 
@@ -225,7 +225,7 @@ void infoPopop(struct application *app, const char *message)
 }
 
 
-void errorPopop(struct application *app, const char *message)
+void errorPopup(struct application *app, const char *message)
 {
 	GtkWidget *dialog;
 
@@ -282,7 +282,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		return;
 	}
 	if (pclose(dfu_fp)) {
-		errorPopop(app, "dfu-programmmer not found. Cannot perform update.");
+		errorPopup(app, "dfu-programmmer not found. Cannot perform update.");
 		return;
 	}
 
@@ -309,7 +309,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		app->updateHexFile = filename;
 
 		if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
-			errorPopop(app, "Signature not found - This file is invalid or not meant for this adapter");
+			errorPopup(app, "Signature not found - This file is invalid or not meant for this adapter");
 		}
 
 		/* Prepare the update dialog widgets... */
@@ -322,9 +322,9 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		gtk_widget_hide( GTK_WIDGET(firmware_update_dialog));
 
 		if (res == GTK_RESPONSE_OK) {
-			infoPopop(app, "Update succeeded.");
+			infoPopup(app, "Update succeeded.");
 		} else if (res == GTK_RESPONSE_REJECT) {
-			errorPopop(app, "Update failed. Suggestion: Do not disconnect the adapter and retry right away!");
+			errorPopup(app, "Update failed. Suggestion: Do not disconnect the adapter and retry right away!");
 		}
 		printf("Update dialog done\n");
 
@@ -414,7 +414,7 @@ G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
 
 	n = gcn64lib_setConfig(app->current_adapter_handle, CFG_PARAM_POLL_INTERVAL0, &buf, 1);
 	if (n != 0) {
-		errorPopop(app, "Error setting configuration");
+		errorPopup(app, "Error setting configuration");
 		deselect_adapter(app);
 		rebuild_device_list_store(data);
 	}
@@ -442,7 +442,7 @@ G_MODULE_EXPORT void config_checkbox_changed(GtkWidget *win, gpointer data)
 		buf = gtk_toggle_button_get_active(configurable_bits[i].chkbtn);
 		n = gcn64lib_setConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, &buf, 1);
 		if (n != 0) {
-			errorPopop(app, "Error setting configuration");
+			errorPopup(app, "Error setting configuration");
 			deselect_adapter(app);
 			rebuild_device_list_store(app);
 			break;
@@ -532,7 +532,7 @@ G_MODULE_EXPORT void adapterSelected(GtkComboBox *cb, gpointer data)
 
 		app->current_adapter_handle = gcn64_openDevice(info);
 		if (!app->current_adapter_handle) {
-			errorPopop(app, "Failed to open adapter");
+			errorPopup(app, "Failed to open adapter");
 			deselect_adapter(app);
 			return;
 		}
@@ -568,19 +568,23 @@ G_MODULE_EXPORT void onFileRescan(GtkWidget *wid, gpointer data)
 	rebuild_device_list_store(data);
 }
 
-static void mempak_io_progress_cb(int progress, void *ctx)
+static int mempak_io_progress_cb(int progress, void *ctx)
 {
 	struct application *app = ctx;
 	GET_UI_ELEMENT(GtkProgressBar, mempak_io_progress);
-	gdouble fract;
-
-	fract = progress/MEMPAK_BLOCK_SIZE;
 
 	gtk_progress_bar_set_fraction(mempak_io_progress, progress/((gdouble)MEMPAK_MEM_SIZE));
 	while (gtk_events_pending()) {
 		gtk_main_iteration_do(FALSE);
 	}
 
+	return app->stop_reading_mempak;
+}
+
+G_MODULE_EXPORT void mempak_io_stop(GtkWidget *wid, gpointer data)
+{
+	struct application *app = data;
+	app->stop_reading_mempak = 1;
 }
 
 G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
@@ -599,16 +603,18 @@ G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
 	gtk_widget_show(GTK_WIDGET(mempak_io_dialog));
 	gtk_label_set_text(mempak_op_label, "Reading memory pack...");
 
+	app->stop_reading_mempak = 0;
 	res = gcn64lib_mempak_download(app->current_adapter_handle, 0, &mpk, mempak_io_progress_cb, app);
 
 	gtk_widget_hide(GTK_WIDGET(mempak_io_dialog));
 	if (res != 0) {
 		switch(res)
 		{
-			case -1: errorPopop(app, "No mempak detected"); break;
-			case -2: errorPopop(app, "I/O error reading mempak"); break;
+			case -1: errorPopup(app, "No mempak detected"); break;
+			case -2: errorPopup(app, "I/O error reading mempak"); break;
+			case -4: errorPopup(app, "Read aborted"); break;
 			default:
-			case -3: errorPopop(app, "Error reading mempak"); break;
+			case -3: errorPopup(app, "Error reading mempak"); break;
 		}
 	}
 	else {

@@ -175,7 +175,7 @@ G_MODULE_EXPORT void mpke_export_note(GtkWidget *win, gpointer data)
 		if (0==get_mempak_entry(app->mpke->mpk, selection, &entry)) {
 			char namebuf[64];
 			if (!entry.valid) {
-				errorPopop(app, "Please select a non-empty note");
+				errorPopup(app, "Please select a non-empty note");
 				return;
 			}
 
@@ -198,7 +198,7 @@ G_MODULE_EXPORT void mpke_export_note(GtkWidget *win, gpointer data)
 
 				filename = gtk_file_chooser_get_filename(chooser);
 				if (mempak_exportNote(app->mpke->mpk, selection, filename)) {
-					errorPopop(app, "Could not export note");
+					errorPopup(app, "Could not export note");
 				} else {
 					printf("Note saved to %s\n", filename);
 				}
@@ -255,8 +255,8 @@ G_MODULE_EXPORT void mpke_insert_note(GtkWidget *win, gpointer data)
 			switch(res)
 			{
 				default:
-				case -1: errorPopop(app, "Error loading file or inserting note\n"); break;
-				case -2: errorPopop(app, "Not enough free blocks to insert note\n"); break;
+				case -1: errorPopup(app, "Error loading file or inserting note\n"); break;
+				case -2: errorPopup(app, "Not enough free blocks to insert note\n"); break;
 			}
 		} else {
 			// Success
@@ -309,7 +309,7 @@ G_MODULE_EXPORT void mpke_open(GtkWidget *win, gpointer data)
 			app->mpke->modified = 0;
 			mpke_replaceMpk(app, mpk, filename);
 		} else {
-			errorPopop(app, "Failed to load mempak");
+			errorPopup(app, "Failed to load mempak");
 		}
 	}
 
@@ -361,7 +361,7 @@ G_MODULE_EXPORT void mpke_saveas(GtkWidget *win, gpointer data)
 			app->mpke->modified = 0;
 			mpke_updateFilename(app,filename);
 		} else {
-			errorPopop(app, "Unknown file format specified");
+			errorPopup(app, "Unknown file format specified");
 		}
 	}
 
