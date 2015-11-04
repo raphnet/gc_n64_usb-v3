@@ -157,9 +157,10 @@ struct option longopts[] = {
 	{ },
 };
 
-static void mempak_progress_cb(int addr, void *ctx)
+static int mempak_progress_cb(int addr, void *ctx)
 {
 	printf("\r%s 0x%04x / 0x%04x  ", (char*)ctx, addr, MEMPAK_MEM_SIZE); fflush(stdout);
+	return 0;
 }
 
 static int listDevices(void)

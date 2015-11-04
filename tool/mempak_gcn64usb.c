@@ -133,7 +133,7 @@ int gcn64lib_mempak_detect(gcn64_hdl_t hdl)
 
 	printf("Init 1\n");
 	memset(buf, 0xfe, 32);
-	res = gcn64lib_expansionWrite(hdl, 0x8000, buf);
+	res = gcn64lib_n64_expansionWrite(hdl, 0x8000, buf);
 	if (res != 0xe1) {
 		printf("res: %d\n", res);
 		return 0;
@@ -141,7 +141,7 @@ int gcn64lib_mempak_detect(gcn64_hdl_t hdl)
 
 	printf("Init 2\n");
 	memset(buf, 0x80, 32);
-	res = gcn64lib_expansionWrite(hdl, 0x8000, buf);
+	res = gcn64lib_n64_expansionWrite(hdl, 0x8000, buf);
 	if (res != 0xe1) {
 		printf("res: %d\n", res);
 		return 0;
@@ -151,7 +151,7 @@ int gcn64lib_mempak_detect(gcn64_hdl_t hdl)
 
 int gcn64lib_mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32])
 {
-	return gcn64lib_expansionWrite(hdl, __calc_address_crc(addr), data);
+	return gcn64lib_n64_expansionWrite(hdl, __calc_address_crc(addr), data);
 }
 
 /**
@@ -159,10 +159,10 @@ int gcn64lib_mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned ch
  * \param hdl The Adapter handler
  * \param channel The adapter channel (for multi-port adapters)
  * \param pak Pointer to mempak_structure pointer to store the new mempak
- * \param progressCb Callback to notify read progress (called after each block)
- * \return 0: Success, -1: No mempak, -2: IO/error, -3: Other errors
+ * \param progressCb Callback to notify read progress (called after each block). The callback can return non-zero to abort.
+ * \return 0: Success, -1: No mempak, -2: IO/error, -3: Other errors, -4: Aborted
  */
-int gcn64lib_mempak_download(gcn64_hdl_t hdl, int channel, mempak_structure_t **mempak, void (*progressCb)(int cur_addr, void *ctx), void *ctx)
+int gcn64lib_mempak_download(gcn64_hdl_t hdl, int channel, mempak_structure_t **mempak, int (*progressCb)(int cur_addr, void *ctx), void *ctx)
 {
 	mempak_structure_t *pak;
 	unsigned short addr;
@@ -189,7 +189,9 @@ int gcn64lib_mempak_download(gcn64_hdl_t hdl, int channel, mempak_structure_t **
 			return -2;
 		}
 		if (progressCb) {
-			progressCb(addr, ctx);
+			if (progressCb(addr, ctx)) {
+				return -4;
+			}
 		}
 	}
 	*mempak = pak;
@@ -197,7 +199,7 @@ int gcn64lib_mempak_download(gcn64_hdl_t hdl, int channel, mempak_structure_t **
 	return 0;
 }
 
-int gcn64lib_mempak_upload(gcn64_hdl_t hdl, int channel, mempak_structure_t *pak, void (*progressCb)(int cur_addr, void *ctx), void *ctx)
+int gcn64lib_mempak_upload(gcn64_hdl_t hdl, int channel, mempak_structure_t *pak, int (*progressCb)(int cur_addr, void *ctx), void *ctx)
 {
 	unsigned short addr;
 	unsigned char readback[0x20];
@@ -230,7 +232,9 @@ int gcn64lib_mempak_upload(gcn64_hdl_t hdl, int channel, mempak_structure_t *pak
 		}
 
 		if (progressCb) {
-			progressCb(addr, ctx);
+			if (progressCb(addr, ctx)) {
+				return -4;
+			}
 		}
 	}
 
