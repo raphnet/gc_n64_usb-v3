@@ -25,6 +25,7 @@ struct application {
 
 	struct mpkedit_data *mpke;
 	int stop_reading_mempak;
+	int inhibit_periodic_updates;
 };
 
 

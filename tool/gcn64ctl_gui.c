@@ -24,6 +24,7 @@ gboolean updateDonefunc(gpointer data)
 
 	rebuild_device_list_store(data);
 	updateGuiFromAdapter(app);
+	app->inhibit_periodic_updates = 0;
 
 	return FALSE;
 }
@@ -57,6 +58,8 @@ gpointer updateThreadFunc(gpointer data)
 	char linebuf[256];
 	char cmd[256];
 	int retries = 10;
+
+	app->inhibit_periodic_updates = 1;
 
 	app->update_status = "Starting...";
 	app->update_percent = 1;
@@ -267,23 +270,35 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 {
 	struct application *app = data;
 	gint res;
-	GtkWidget *dialog;
+	GtkWidget *dialog = NULL;
 	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
 	GET_UI_ELEMENT(GtkFileFilter, hexfilter);
 	GET_UI_ELEMENT(GtkDialog, firmware_update_dialog);
 	GET_UI_ELEMENT(GtkLabel, lbl_firmware_filename);
 	GET_UI_ELEMENT(GtkButtonBox, update_dialog_btnBox);
 	FILE *dfu_fp;
+	char *filename = NULL, *basename = NULL;
+	char adap_sig[64];
+
+	if (gcn64lib_getSignature(app->current_adapter_handle, adap_sig, sizeof(adap_sig))) {
+		errorPopup(app, "Could not read adapter signature - This file may not be meant for it (Bricking hazard!)");
+		goto done;
+	}
+
+	printf("Adapter signature: %s\n", adap_sig);
 
 	/* Test for dfu-programmer presence in path*/
-	dfu_fp = popen("dfu-programmer --help", "r");
+	dfu_fp = popen("dfu-programmer --version", "r");
 	if (!dfu_fp) {
 		perror("popen");
 		return;
 	}
-	if (pclose(dfu_fp)) {
-		errorPopup(app, "dfu-programmmer not found. Cannot perform update.");
-		return;
+	res = pclose(dfu_fp);
+	if (!WIFEXITED(res) || (WEXITSTATUS(res)!=1)) {
+		if (res) {
+			errorPopup(app, "dfu-programmmer not found. Cannot perform update.");
+			return;
+		}
 	}
 
 	dialog = gtk_file_chooser_dialog_new("Open .hex file",
@@ -299,7 +314,6 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 
 	res = gtk_dialog_run (GTK_DIALOG(dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
-		char *filename, *basename;
 		GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
 
 		filename = gtk_file_chooser_get_filename(chooser);
@@ -308,8 +322,11 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		printf("File selected: %s\n", filename);
 		app->updateHexFile = filename;
 
-		if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
+		printf("Adapter signature: %s\n", adap_sig);
+		//if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
+		if (!check_ihex_for_signature(filename, adap_sig)) {
 			errorPopup(app, "Signature not found - This file is invalid or not meant for this adapter");
+			goto done;
 		}
 
 		/* Prepare the update dialog widgets... */
@@ -328,11 +345,15 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		}
 		printf("Update dialog done\n");
 
-		g_free(filename);
-		g_free(basename);
 	}
 
-	gtk_widget_destroy(dialog);
+done:
+	if (filename)
+		g_free(filename);
+	if (basename)
+		g_free(basename);
+	if (dialog)
+		gtk_widget_destroy(dialog);
 }
 
 static void updateGuiFromAdapter(struct application *app)
@@ -356,21 +377,33 @@ static void updateGuiFromAdapter(struct application *app)
 	GET_UI_ELEMENT(GtkLabel, label_usb_id);
 	GET_UI_ELEMENT(GtkLabel, label_device_path);
 	GET_UI_ELEMENT(GtkLabel, label_controller_type);
+	GET_UI_ELEMENT(GtkSpinButton, pollInterval0);
 	int i;
 	struct gcn64_info *info = &app->current_adapter_info;
+	char adap_sig[64];
 
 	if (!app->current_adapter_handle) {
 		deselect_adapter(app);
 		return;
 	}
 
-	GtkSpinButton *pollInterval0 = GTK_SPIN_BUTTON( gtk_builder_get_object(app->builder, "pollInterval0") );
+	if (gcn64lib_getSignature(app->current_adapter_handle, adap_sig, sizeof(adap_sig))) {
+	} else {
+		printf("Adapter signature: %s\n", adap_sig);
+	}
 
 	n = gcn64lib_getConfig(app->current_adapter_handle, CFG_PARAM_POLL_INTERVAL0, buf, sizeof(buf));
 	if (n == 1) {
 		printf("poll interval: %d\n", buf[0]);
 		gtk_spin_button_set_value(pollInterval0, (gdouble)buf[0]);
 	}
+
+	printf("Adapter signature: %s\n", adap_sig);
+	if (gcn64lib_getSignature(app->current_adapter_handle, adap_sig, sizeof(adap_sig))) {
+	} else {
+		printf("Adapter signature: %s\n", adap_sig);
+	}
+
 
 	for (i=0; configurable_bits[i].chkbtn; i++) {
 		gcn64lib_getConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, buf, sizeof(buf));
@@ -406,7 +439,7 @@ gboolean periodic_updater(gpointer data)
 	GET_UI_ELEMENT(GtkLabel, label_controller_type);
 	int controller_type;
 
-	if (app->current_adapter_handle) {
+	if (app->current_adapter_handle && !app->inhibit_periodic_updates) {
 		controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
 		gtk_label_set_text(label_controller_type, gcn64lib_controllerName(controller_type));
 	}
