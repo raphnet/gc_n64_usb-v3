@@ -138,7 +138,7 @@ void mpke_syncModel(struct application *app)
 			gtk_list_store_set(n64_notes, &iter, 0, i, 1, "!!ERROR!!", 2, 0, -1);
 		} else {
 			if (note_data.valid) {
-				gtk_list_store_set(n64_notes, &iter, 0, i, 1, note_data.name, 2, note_data.blocks, -1);
+				gtk_list_store_set(n64_notes, &iter, 0, i, 1, note_data.name, 2, note_data.blocks, 3, app->mpke->mpk->note_comments[i], -1);
 			} else {
 				gtk_list_store_set(n64_notes, &iter, 0, i, -1);
 			}
