@@ -1,3 +1,6 @@
+- October 5, 2015 : Version 3.1.0
+  - Add a test rumble command (for GUI tool, or for simple rumble control)
+
 - October 2, 2015 : Version 3.0.0
   Initial release:
   - Gamecube and N64 controller support

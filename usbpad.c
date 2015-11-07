@@ -36,7 +36,7 @@
 
 
 static volatile unsigned char gamepad_vibrate = 0; // output
-static unsigned char vibration_on = 0;
+static unsigned char vibration_on = 0, force_vibrate = 0;
 static unsigned char constant_force = 0;
 static unsigned char magnitude = 0;
 
@@ -209,8 +209,17 @@ void usbpad_update(const gamepad_data *pad_data)
 	}
 }
 
+void usbpad_forceVibrate(char force)
+{
+	force_vibrate = force;
+}
+
 char usbpad_mustVibrate(void)
 {
+	if (force_vibrate) {
+		return 1;
+	}
+
 	if (!vibration_on) {
 		gamepad_vibrate = 0;
 	} else {

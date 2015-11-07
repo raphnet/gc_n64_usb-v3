@@ -115,6 +115,12 @@ static void hiddata_processCommandBuffer(void)
 			cmdbuf[2] = current_pad_type;
 			cmdbuf_len = 3;
 			break;
+		case RQ_GCN64_SET_VIBRATION:
+			// CMD : RQ, CHN, Vibrate
+			// Answer: RQ, CHN, Vibrate
+			usbpad_forceVibrate(cmdbuf[2]);
+			cmdbuf_len = 3;
+			break;
 	}
 
 #ifdef DEBUG

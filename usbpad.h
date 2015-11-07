@@ -9,6 +9,7 @@ unsigned char *usbpad_getReportBuffer(void);
 
 void usbpad_update(const gamepad_data *pad_data);
 char usbpad_mustVibrate(void);
+void usbpad_forceVibrate(char force);
 
 uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16_t len);
 uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat);
