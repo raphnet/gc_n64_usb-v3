@@ -218,25 +218,40 @@ int gcn64lib_bootloader(gcn64_hdl_t hdl)
 	return 0;
 }
 
-int gcn64lib_n64_expansionWrite(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32])
+int gcn64lib_n64_expansionWrite(gcn64_hdl_t hdl, unsigned short addr, unsigned char *data, int len)
 {
-	unsigned char cmd[40];
+	unsigned char cmd[3 + len];
 	int cmdlen;
 	int n;
 
 	cmd[0] = N64_EXPANSION_WRITE;
 	cmd[1] = addr>>8; // Address high byte
 	cmd[2] = addr&0xff; // Address low byte
-	memcpy(cmd + 3, data, 0x20);
-	cmdlen = 3 + 0x20;
+	memcpy(cmd + 3, data, len);
+	cmdlen = 3 + len;
 
 	n = gcn64lib_rawSiCommand(hdl, 0, cmd, cmdlen, cmd, sizeof(cmd));
 	if (n != 1) {
-		printf("write block returned != 1 (%d)\n", n);
+		printf("expansion write returned != 1 (%d)\n", n);
 		return -1;
 	}
 
 	return cmd[0];
 }
 
+int gcn64lib_n64_expansionRead(gcn64_hdl_t hdl, unsigned short addr, unsigned char *dst, int max_len)
+{
+	unsigned char cmd[3];
+	int n;
+
+	cmd[0] = N64_EXPANSION_READ;
+	cmd[1] = addr>>8; // Address high byte
+	cmd[2] = addr&0xff; // Address low byte
+
+	n = gcn64lib_rawSiCommand(hdl, 0, cmd, 3, dst, max_len);
+	if (n < 0)
+		return n;
+
+	return n;
+}
 
