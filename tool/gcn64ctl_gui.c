@@ -291,8 +291,6 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		goto done;
 	}
 
-	printf("Adapter signature: %s\n", adap_sig);
-
 	/* Test for dfu-programmer presence in path*/
 	dfu_fp = popen("dfu-programmer --version", "r");
 	if (!dfu_fp) {
@@ -325,11 +323,12 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		filename = gtk_file_chooser_get_filename(chooser);
 		basename = g_path_get_basename(filename);
 
+		gtk_widget_destroy(dialog);
+		dialog = NULL;
+
 		printf("File selected: %s\n", filename);
 		app->updateHexFile = filename;
 
-		printf("Adapter signature: %s\n", adap_sig);
-		//if (!check_ihex_for_signature(filename, "9c3ea8b8-753f-11e5-a0dc-001bfca3c593")) {
 		if (!check_ihex_for_signature(filename, adap_sig)) {
 			errorPopup(app, "Signature not found - This file is invalid or not meant for this adapter");
 			goto done;
@@ -346,6 +345,8 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		/* Prepare the update dialog widgets... */
 		gtk_label_set_text(lbl_firmware_filename, basename);
 		gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), TRUE);
+		app->update_percent = 0;
+		app->update_status = "Ready";
 		updateProgress(data);
 
 		/* Run the dialog */
@@ -442,13 +443,6 @@ static void updateGuiFromAdapter(struct application *app)
 		printf("poll interval: %d\n", buf[0]);
 		gtk_spin_button_set_value(pollInterval0, (gdouble)buf[0]);
 	}
-
-	printf("Adapter signature: %s\n", adap_sig);
-	if (gcn64lib_getSignature(app->current_adapter_handle, adap_sig, sizeof(adap_sig))) {
-	} else {
-		printf("Adapter signature: %s\n", adap_sig);
-	}
-
 
 	for (i=0; configurable_bits[i].chkbtn; i++) {
 		gcn64lib_getConfig(app->current_adapter_handle, configurable_bits[i].cfg_param, buf, sizeof(buf));
