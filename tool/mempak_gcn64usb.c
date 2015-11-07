@@ -6,6 +6,7 @@
 #include "gcn64.h"
 #include "mempak.h"
 #include "mempak_gcn64usb.h"
+#include "hexdump.h"
 #include "../gcn64_protocol.h"
 #include "../requests.h"
 
@@ -128,30 +129,92 @@ int gcn64lib_mempak_readBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned cha
 
 int gcn64lib_mempak_detect(gcn64_hdl_t hdl)
 {
-	unsigned char buf[0x20];
+	unsigned char buf[40];
 	int res;
+	unsigned short addr = __calc_address_crc(0x8000);
+	int first_read, second_read;
 
-	printf("Init 1\n");
+	buf[0] = N64_GET_CAPABILITIES;
+	res = gcn64lib_rawSiCommand(hdl, 0, buf, 1, buf, sizeof(buf));
+	if (res < 0) {
+		return -1;
+	}
+	if (res != 3) {
+		return -1;
+	}
+	if (!(buf[2] & 0x01)) {
+		printf("No accessory connected\n");
+		return -1;
+	}
+
+	/* first write 32 0xFEs */
 	memset(buf, 0xfe, 32);
-	res = gcn64lib_n64_expansionWrite(hdl, 0x8000, buf);
-	if (res != 0xe1) {
-		printf("res: %d\n", res);
+	res = gcn64lib_n64_expansionWrite(hdl, addr, buf, 32);
+	if (res < 0) {
+		return -1;
+	}
+	if (res != 0xE1) {
+		return -1;
+	}
+
+	/* Read back (normally zeros) */
+	res = gcn64lib_n64_expansionRead(hdl, addr, buf, sizeof(buf));
+	if (res < 0) {
+		return -1;
+	}
+	first_read = buf[0];
+
+	/* Now write 32 0x80s */
+	memset(buf, 0x80, 32);
+	res = gcn64lib_n64_expansionWrite(hdl, addr, buf, 32);
+	if (res < 0) {
+		return -1;
+	}
+
+	/* Normally, read back (0x00 on memory card, 0x80 on rumble pak)
+	 *
+	 * But this simple detection method (from libdragon) does not detect one of my
+	 * memory cards (it looks like a rumble pack).
+	 *
+	 * But I found out that the values that are read back are just always equal to while
+	 * for other hardware, reading after writing the 0xfe values always seem to return 0x00.
+	 */
+	res = gcn64lib_n64_expansionRead(hdl, addr, buf, sizeof(buf));
+	if (res < 0) {
+		printf("failed to detect mempak: %d\n", res);
+		return -1;
+	}
+	second_read = buf[0];
+
+
+	// Values seen here are
+	//
+	// - Official Nintendo rumble pack: 0x00
+	// - Yobo rumble pack: 0x00
+	// - Yobo mempak: 0x00
+	// - Unknown "super memory card 1000": 0xFE
+	//
+	if (first_read == 0xfe) {
+		printf("super memory card 1000 probably detected\n");
 		return 0;
 	}
 
-	printf("Init 2\n");
-	memset(buf, 0x80, 32);
-	res = gcn64lib_n64_expansionWrite(hdl, 0x8000, buf);
-	if (res != 0xe1) {
-		printf("res: %d\n", res);
+	// Values seen here are
+	//
+	// - Official Nintendo rumble pack: 0x80
+	// - Yobo rumble pack: 0x80
+	// - Yobo mempak: 0x00
+	// - Unknown "super memory card 1000": 0x80 (but this card is catched above)
+	if (second_read == 0x80) {
+		return -1; // rumble
+	} else {
 		return 0;
 	}
-	return -1;
 }
 
 int gcn64lib_mempak_writeBlock(gcn64_hdl_t hdl, unsigned short addr, unsigned char data[32])
 {
-	return gcn64lib_n64_expansionWrite(hdl, __calc_address_crc(addr), data);
+	return gcn64lib_n64_expansionWrite(hdl, __calc_address_crc(addr), data, 32);
 }
 
 /**
