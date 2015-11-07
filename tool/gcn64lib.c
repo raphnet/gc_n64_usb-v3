@@ -132,6 +132,22 @@ int gcn64lib_getSignature(gcn64_hdl_t hdl, char *dst, int dstmax)
 	return 0;
 }
 
+int gcn64lib_forceVibration(gcn64_hdl_t hdl, unsigned char channel, unsigned char vibrate)
+{
+	unsigned char cmd[3];
+	int n;
+
+	cmd[0] = RQ_GCN64_SET_VIBRATION;
+	cmd[1] = channel;
+	cmd[2] = vibrate;
+
+	n = gcn64_exchange(hdl, cmd, 3, cmd, sizeof(cmd));
+	if (n<0)
+		return n;
+
+	return 0;
+}
+
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx)
 {
 	unsigned char cmd[3 + tx_len];

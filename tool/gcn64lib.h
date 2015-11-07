@@ -14,6 +14,7 @@ int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, 
 int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char *tx, unsigned char tx_len, unsigned char *rx, unsigned char max_rx);
 int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax);
 int gcn64lib_getSignature(gcn64_hdl_t hdl, char *dst, int dstmax);
+int gcn64lib_forceVibration(gcn64_hdl_t hdl, unsigned char channel, unsigned char vibrate);
 int gcn64lib_getControllerType(gcn64_hdl_t hdl, int chn);
 const char *gcn64lib_controllerName(int type);
 int gcn64lib_bootloader(gcn64_hdl_t hdl);
