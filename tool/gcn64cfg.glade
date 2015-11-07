@@ -563,6 +563,7 @@ Author: Raphaël Assénat
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="max_length">3</property>
+                                    <property name="shadow_type">etched-out</property>
                                     <property name="caps_lock_warning">False</property>
                                     <property name="progress_fraction">0.10000000000000001</property>
                                     <property name="input_purpose">number</property>
@@ -666,7 +667,7 @@ Author: Raphaël Assénat
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="button4">
+                              <object class="GtkButton" id="btn_read_mempak">
                                 <property name="label" translatable="yes">Read N64 mempak</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -677,6 +678,20 @@ Author: Raphaël Assénat
                                 <property name="expand">True</property>
                                 <property name="fill">True</property>
                                 <property name="position">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="btn_rumble_test">
+                                <property name="label" translatable="yes">Test vibration</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <signal name="clicked" handler="testVibration" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">4</property>
                               </packing>
                             </child>
                           </object>

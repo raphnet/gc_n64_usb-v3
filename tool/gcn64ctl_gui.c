@@ -77,7 +77,11 @@ gpointer updateThreadFunc(gpointer data)
 		app->update_percent++;
 		gdk_threads_add_idle(updateProgress, data);
 
-		dfu_fp = popen("dfu-programmer at90usb1287 erase", "r");
+		if (app->at90usb1287) {
+			dfu_fp = popen("dfu-programmer at90usb1287 erase", "r");
+		} else {
+			dfu_fp = popen("dfu-programmer atmega32u2 erase", "r");
+		}
 		if (!dfu_fp) {
 			app->update_dialog_response = GTK_RESPONSE_REJECT;
 			gdk_threads_add_idle(updateDonefunc, data);
@@ -111,7 +115,9 @@ gpointer updateThreadFunc(gpointer data)
 	app->update_percent = 30;
 	gdk_threads_add_idle(updateProgress, data);
 
-	snprintf(cmd, sizeof(cmd), "dfu-programmer at90usb1287 flash %s", app->updateHexFile);
+	snprintf(cmd, sizeof(cmd), "dfu-programmer %s flash %s",
+				app->at90usb1287 ? "at90usb1287" : "atmega32u2",
+				app->updateHexFile);
 	dfu_fp = popen(cmd, "r");
 	if (!dfu_fp) {
 		app->update_dialog_response = GTK_RESPONSE_REJECT;
@@ -329,6 +335,14 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 			goto done;
 		}
 
+		// For my development board based on at90usb1287. Need to pass the correct
+		// MCU argument to dfu-programmer
+		if (0 == strcmp("e106420a-7c54-11e5-ae9a-001bfca3c593", adap_sig)) {
+			app->at90usb1287 = 1;
+		} else {
+			app->at90usb1287 = 0;
+		}
+
 		/* Prepare the update dialog widgets... */
 		gtk_label_set_text(lbl_firmware_filename, basename);
 		gtk_widget_set_sensitive(GTK_WIDGET(update_dialog_btnBox), TRUE);
@@ -356,6 +370,39 @@ done:
 		gtk_widget_destroy(dialog);
 }
 
+static gboolean periodic_updater(gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkLabel, label_controller_type);
+	GET_UI_ELEMENT(GtkButton, btn_read_mempak);
+	GET_UI_ELEMENT(GtkButton, btn_rumble_test);
+
+	if (app->current_adapter_handle && !app->inhibit_periodic_updates) {
+		app->controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
+		gtk_label_set_text(label_controller_type, gcn64lib_controllerName(app->controller_type));
+
+		switch (app->controller_type)
+		{
+			case CTL_TYPE_N64:
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), TRUE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), TRUE);
+				break;
+			case CTL_TYPE_GC:
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), TRUE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), FALSE);
+				break;
+
+			default:
+			case CTL_TYPE_NONE:
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), FALSE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), FALSE);
+				break;
+		}
+
+	}
+	return TRUE;
+}
+
 static void updateGuiFromAdapter(struct application *app)
 {
 	unsigned char buf[32];
@@ -371,12 +418,10 @@ static void updateGuiFromAdapter(struct application *app)
 		{ CFG_PARAM_INVERT_TRIG, GET_ELEMENT(GtkToggleButton, chkbtn_gc_invert_trig) },
 		{ },
 	};
-	int controller_type;
 	GET_UI_ELEMENT(GtkLabel, label_product_name);
 	GET_UI_ELEMENT(GtkLabel, label_firmware_version);
 	GET_UI_ELEMENT(GtkLabel, label_usb_id);
 	GET_UI_ELEMENT(GtkLabel, label_device_path);
-	GET_UI_ELEMENT(GtkLabel, label_controller_type);
 	GET_UI_ELEMENT(GtkSpinButton, pollInterval0);
 	int i;
 	struct gcn64_info *info = &app->current_adapter_info;
@@ -418,6 +463,7 @@ static void updateGuiFromAdapter(struct application *app)
 	}
 
 	if (0 == gcn64lib_getVersion(app->current_adapter_handle, (char*)buf, sizeof(buf))) {
+		sscanf((char*)buf, "%d.%d.%d", &app->firmware_maj, &app->firmware_min, &app->firmware_build);
 		gtk_label_set_text(label_firmware_version, (char*)buf);
 
 	}
@@ -427,23 +473,7 @@ static void updateGuiFromAdapter(struct application *app)
 
 	gtk_label_set_text(label_device_path, info->str_path);
 
-	controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
-	gtk_label_set_text(label_controller_type, gcn64lib_controllerName(controller_type));
-
-
-}
-
-gboolean periodic_updater(gpointer data)
-{
-	struct application *app = data;
-	GET_UI_ELEMENT(GtkLabel, label_controller_type);
-	int controller_type;
-
-	if (app->current_adapter_handle && !app->inhibit_periodic_updates) {
-		controller_type = gcn64lib_getControllerType(app->current_adapter_handle, 0);
-		gtk_label_set_text(label_controller_type, gcn64lib_controllerName(controller_type));
-	}
-	return TRUE;
+	periodic_updater(app);
 }
 
 G_MODULE_EXPORT void pollIntervalChanged(GtkWidget *win, gpointer data)
@@ -669,6 +699,25 @@ G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
 	}
 }
 
+G_MODULE_EXPORT void testVibration(GtkWidget *wid, gpointer data)
+{
+	struct application *app = data;
+	GtkWidget *dialog;
+
+	if ((app->firmware_maj < 3) || (app->firmware_min < 1)) {
+		errorPopup(app, "Firmware 3.1 or later required");
+	} else {
+		if (0 > gcn64lib_forceVibration(app->current_adapter_handle, 0, 1)) {
+			errorPopup(app, "Error setting vibration");
+		} else {
+			dialog = gtk_dialog_new_with_buttons("Vibration test", app->mainwindow, GTK_DIALOG_MODAL, "Stop vibration", GTK_RESPONSE_ACCEPT, NULL);
+			gtk_dialog_run(GTK_DIALOG(dialog));
+			gtk_widget_destroy(dialog);
+
+			gcn64lib_forceVibration(app->current_adapter_handle, 0, 0);
+		}
+	}
+}
 
 int
 main( int    argc,

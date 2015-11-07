@@ -26,6 +26,9 @@ struct application {
 	struct mpkedit_data *mpke;
 	int stop_reading_mempak;
 	int inhibit_periodic_updates;
+	int controller_type;
+	int firmware_maj, firmware_min, firmware_build;
+	int at90usb1287;
 };
 
 
