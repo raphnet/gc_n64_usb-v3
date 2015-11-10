@@ -376,6 +376,7 @@ static gboolean periodic_updater(gpointer data)
 	struct application *app = data;
 	GET_UI_ELEMENT(GtkLabel, label_controller_type);
 	GET_UI_ELEMENT(GtkButton, btn_read_mempak);
+	GET_UI_ELEMENT(GtkButton, btn_write_mempak);
 	GET_UI_ELEMENT(GtkButton, btn_rumble_test);
 
 	if (app->current_adapter_handle && !app->inhibit_periodic_updates) {
@@ -386,16 +387,19 @@ static gboolean periodic_updater(gpointer data)
 		{
 			case CTL_TYPE_N64:
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), TRUE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_write_mempak), TRUE);
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), TRUE);
 				break;
 			case CTL_TYPE_GC:
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), TRUE);
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), FALSE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_write_mempak), FALSE);
 				break;
 
 			default:
 			case CTL_TYPE_NONE:
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_read_mempak), FALSE);
+				gtk_widget_set_sensitive(GTK_WIDGET(btn_write_mempak), FALSE);
 				gtk_widget_set_sensitive(GTK_WIDGET(btn_rumble_test), FALSE);
 				break;
 		}
@@ -648,13 +652,64 @@ static int mempak_io_progress_cb(int progress, void *ctx)
 		gtk_main_iteration_do(FALSE);
 	}
 
-	return app->stop_reading_mempak;
+	return app->stop_mempak_io;
 }
 
 G_MODULE_EXPORT void mempak_io_stop(GtkWidget *wid, gpointer data)
 {
 	struct application *app = data;
-	app->stop_reading_mempak = 1;
+	app->stop_mempak_io = 1;
+}
+
+G_MODULE_EXPORT void write_n64_pak(GtkWidget *wid, gpointer data)
+{
+	struct application *app = data;
+	GET_UI_ELEMENT(GtkWindow, win_mempak_edit);
+	GET_UI_ELEMENT(GtkDialog, mempak_io_dialog);
+	GET_UI_ELEMENT(GtkLabel, mempak_op_label);
+	GtkWidget *confirm_dialog;
+	gint res;
+
+	gtk_widget_show(GTK_WIDGET(win_mempak_edit));
+
+
+	confirm_dialog = gtk_message_dialog_new(GTK_WINDOW(win_mempak_edit), GTK_DIALOG_MODAL,
+									GTK_MESSAGE_QUESTION, 0, "Your memory card will be completely overwritten by the content of the memory pack editor.\n\nAre you sure?");
+
+	gtk_dialog_add_buttons(GTK_DIALOG(confirm_dialog), "Cancel", 1, "Continue", 2, NULL);
+
+	res = gtk_dialog_run(GTK_DIALOG(confirm_dialog));
+	gtk_widget_destroy(confirm_dialog);
+
+	switch(res)
+	{
+		case 2:
+			printf("Confirmed write N64 mempak.\n");
+
+			app->stop_mempak_io = 0;
+			gtk_label_set_text(mempak_op_label, "Writing memory pack...");
+			gtk_widget_show(GTK_WIDGET(mempak_io_dialog));
+
+			res = gcn64lib_mempak_upload(app->current_adapter_handle, 0, mpke_getCurrentMempak(app), mempak_io_progress_cb, app);
+			gtk_widget_hide(GTK_WIDGET(mempak_io_dialog));
+
+			if (res != 0) {
+				switch(res)
+				{
+					case -1: errorPopup(app, "No mempak detected"); break;
+					case -2: errorPopup(app, "I/O error writing to mempak"); break;
+					case -4: errorPopup(app, "Write aborted"); break;
+					default:
+						errorPopup(app, "Error writing to mempak"); break;
+				}
+			}
+
+			break;
+		case 1:
+		default:
+			printf("Write N64 mempak cancelled\n");
+	}
+
 }
 
 G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
@@ -673,7 +728,7 @@ G_MODULE_EXPORT void read_n64_pak(GtkWidget *wid, gpointer data)
 	gtk_widget_show(GTK_WIDGET(mempak_io_dialog));
 	gtk_label_set_text(mempak_op_label, "Reading memory pack...");
 
-	app->stop_reading_mempak = 0;
+	app->stop_mempak_io = 0;
 	res = gcn64lib_mempak_download(app->current_adapter_handle, 0, &mpk, mempak_io_progress_cb, app);
 
 	gtk_widget_hide(GTK_WIDGET(mempak_io_dialog));

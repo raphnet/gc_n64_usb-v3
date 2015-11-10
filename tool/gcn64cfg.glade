@@ -667,20 +667,6 @@ Author: Raphaël Assénat
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="btn_read_mempak">
-                                <property name="label" translatable="yes">Read N64 mempak</property>
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="receives_default">True</property>
-                                <signal name="clicked" handler="read_n64_pak" swapped="no"/>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">3</property>
-                              </packing>
-                            </child>
-                            <child>
                               <object class="GtkButton" id="btn_rumble_test">
                                 <property name="label" translatable="yes">Test vibration</property>
                                 <property name="visible">True</property>
@@ -691,7 +677,35 @@ Author: Raphaël Assénat
                               <packing>
                                 <property name="expand">True</property>
                                 <property name="fill">True</property>
+                                <property name="position">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="btn_read_mempak">
+                                <property name="label" translatable="yes">Read N64 mempak</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <signal name="clicked" handler="read_n64_pak" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
                                 <property name="position">4</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="btn_write_mempak">
+                                <property name="label" translatable="yes">Write N64 mempak...</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <signal name="clicked" handler="write_n64_pak" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">5</property>
                               </packing>
                             </child>
                           </object>

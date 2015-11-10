@@ -24,7 +24,7 @@ struct application {
 	int update_dialog_response;
 
 	struct mpkedit_data *mpke;
-	int stop_reading_mempak;
+	int stop_mempak_io;
 	int inhibit_periodic_updates;
 	int controller_type;
 	int firmware_maj, firmware_min, firmware_build;

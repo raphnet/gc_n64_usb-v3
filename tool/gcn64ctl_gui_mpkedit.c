@@ -412,3 +412,9 @@ G_MODULE_EXPORT void onMempakWindowShow(GtkWidget *win, gpointer data)
 	struct application *app = data;
 	mpke_syncModel(app);
 }
+
+mempak_structure_t *mpke_getCurrentMempak(struct application *app)
+{
+	return app->mpke->mpk;
+}
+
