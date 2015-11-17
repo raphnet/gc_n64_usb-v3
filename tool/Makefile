@@ -10,7 +10,7 @@ endif
 
 
 ifeq ($(shell uname -o), Msys)
-COMPAT_OBJS=sleep.o memmem.o
+COMPAT_OBJS=sleep.o memmem.o strcasestr.o
 endif
 
 CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99
