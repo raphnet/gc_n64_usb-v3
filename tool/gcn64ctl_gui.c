@@ -285,6 +285,11 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 	FILE *dfu_fp;
 	char *filename = NULL, *basename = NULL;
 	char adap_sig[64];
+#ifndef WINDOWS
+	const char *notfound = "dfu-programmer not found. Cannot perform update.";
+#else
+	const char *notfound = "dfu-programmer.exe not found. Cannot perform update.";
+#endif
 
 	if (gcn64lib_getSignature(app->current_adapter_handle, adap_sig, sizeof(adap_sig))) {
 		errorPopup(app, "Could not read adapter signature - This file may not be meant for it (Bricking hazard!)");
@@ -293,14 +298,23 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 
 	/* Test for dfu-programmer presence in path*/
 	dfu_fp = popen("dfu-programmer --version", "r");
+	//dfu_fp = popen("dfu2-programmer --version", "r");
 	if (!dfu_fp) {
 		perror("popen");
+		errorPopup(app, notfound);
 		return;
 	}
 	res = pclose(dfu_fp);
+#ifdef WINDOWS WIFEXITED
+	// Under Mingw, 0 is returned when dfu-programmmer was found 
+	// and executed. Otherwise 1.
+	if (res != 0) {
+#else
+	// Under Unix, the usual is available.
 	if (!WIFEXITED(res) || (WEXITSTATUS(res)!=1)) {
+#endif
 		if (res) {
-			errorPopup(app, "dfu-programmmer not found. Cannot perform update.");
+			errorPopup(app, notfound);
 			return;
 		}
 	}
