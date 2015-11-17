@@ -305,7 +305,7 @@ G_MODULE_EXPORT void update_usbadapter_firmware(GtkWidget *w, gpointer data)
 		return;
 	}
 	res = pclose(dfu_fp);
-#ifdef WINDOWS WIFEXITED
+#ifdef WINDOWS
 	// Under Mingw, 0 is returned when dfu-programmmer was found 
 	// and executed. Otherwise 1.
 	if (res != 0) {
