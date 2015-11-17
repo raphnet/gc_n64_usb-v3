@@ -11,9 +11,10 @@ endif
 
 ifeq ($(shell uname -o), Msys)
 COMPAT_OBJS=sleep.o memmem.o strcasestr.o
+PLATFORM_CFLAGS=-DWINDOWS
 endif
 
-CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99
+CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99 $(PLATFORM_CFLAGS)
 LDFLAGS=`pkg-config $(HIDAPI_NAME) --libs` -g
 GTK_CFLAGS=`pkg-config --cflags gtk+-3.0 gmodule-2.0`
 GTK_LDFLAGS=`pkg-config --libs gtk+-3.0 gmodule-2.0`
