@@ -164,19 +164,17 @@ int gcn64_detectController(void)
 	 * 0xa800 Wavebird
 	 * 0xebb0 Wavebird
 	 *
-	 * This last entry worries me. I never observed it, but who knows
-	 * what the user will connect? Better be safe and consider 0xb as
-	 * a gamecube controller too.
-	 *
-	 * */
+	 **/
 
 	id = (data[0]<<8) | data[1];
+
+	printf("Id: %04x   (%d: %02x %02x %02x)\r\n", id, count, data[0], data[1], data[2]);
 
 #ifdef FORCE_KEYBOARD
 	return CONTROLLER_IS_GC_KEYBOARD;
 #endif
 
-	switch (id >> 8) {
+	switch ((id >> 8) & 0x0F) {
 		case 0x05:
 			return CONTROLLER_IS_N64;
 
