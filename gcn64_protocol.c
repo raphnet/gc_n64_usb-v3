@@ -86,7 +86,16 @@ unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned ch
 	SREG = sreg;
 
 	if (count == 0xff) {
-		printf("rx error\n");
+#ifdef TRACE_GCN64
+		printf("rx error\r\n");
+#endif
+		return 0;
+	}
+
+	if (count == 0xfe) {
+#ifdef TRACE_GCN64
+		printf("buffer too small\r\n");
+#endif
 		return 0;
 	}
 
