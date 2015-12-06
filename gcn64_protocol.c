@@ -24,6 +24,7 @@
 #include "gcn64txrx.h"
 
 #undef FORCE_KEYBOARD
+#undef TRACE_GCN64
 
 /******** IO port definitions and options **************/
 #ifndef STK525
@@ -66,7 +67,16 @@ unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned ch
 {
 	int count;
 	unsigned char sreg = SREG;
-	//int i;
+
+#ifdef TRACE_GCN64
+	int i;
+
+	printf("TX[%d] = { ", tx_len);
+	for (i=0; i<tx_len; i++) {
+		printf("%02x ", tx[i]);
+	}
+	printf("}\r\n");
+#endif
 
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
@@ -74,20 +84,19 @@ unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned ch
 	gcn64_sendBytes(tx, tx_len);
 	count = gcn64_receiveBytes(rx, rx_max);
 	SREG = sreg;
-#if 0
-	printf("Count: %d { ", count);
-	for (i=0; i<count; i++) {
-		printf("%02x ", rx[i]);
-	}
-	printf("}\r\n");
-#endif
-	if (!count)
-		return 0;
 
 	if (count == 0xff) {
 		printf("rx error\n");
 		return 0;
 	}
+
+#ifdef TRACE_GCN64
+	printf("RX[%d] = { ", count);
+	for (i=0; i<count; i++) {
+		printf("%02x ", rx[i]);
+	}
+	printf("}\r\n");
+#endif
 
 	/* this delay is required on N64 controllers. Otherwise, after sending
 	 * a rumble-on or rumble-off command (probably init too), the following
