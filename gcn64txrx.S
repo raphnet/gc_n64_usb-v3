@@ -84,7 +84,8 @@ waitlow_lp:
 
 store_byte:
 	inc r24 ; Count byte
-	breq overflow ; TODO : Check against r22
+	cp r22, r24
+	breq overflow
 	st z+,r20
 	ldi r20, 1
 
