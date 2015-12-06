@@ -49,7 +49,7 @@
 	; unsigned int gcn64_receiveBytes(unsigned char *dstbuf, unsigned char max_bytes);
 	; r24,r25 : dstbuf
 	; r22 : max bytes (for fututre use)
-	; return: count in r24,r25
+	; return: count in r24,r25 (0xff: Error, 0xfe: Overflow [max_bytes too low])
 gcn64_receiveBytes:
 	clr xl
 	clr xh
@@ -83,9 +83,9 @@ waitlow_lp:
 	rjmp waithigh
 
 store_byte:
-	inc r24 ; Count byte
-	cp r22, r24
+	cp r22, r24 ; Check max_bytes
 	breq overflow
+	inc r24 ; Count byte
 	st z+,r20
 	ldi r20, 1
 
@@ -98,18 +98,35 @@ waithigh_lp:
 	rjmp waithigh_lp
 	rjmp waitlow
 
+overflow:
+	ser r24 ; 0xff
+	dec r24 ; 0xfe
+	ret
+
 timeout:
 	tst r24
 	breq rxdone ; If r24 is still zero, we did not receive anything. Return 0.
 	; Otherwise, it is a frame error (i.e. A partial byte was received)
 frame_error:
-overflow: ; Treat overflow as an error as well
 	ser r24
 rxdone:
 	; Return the number if received bits in r24
 	ret
 
 
+; These are for a slower 4us/1.5us timing.
+; The MadCatz Microcon does not work with 3us/1us timing...
+#define LOOPS_SEND0_LOW		20
+#define DELAY_SEND0_HIGH	2
+#define LOOPS_SEND1_LOW		4
+#define LOOPS_SEND1_HIGH	13
+
+/*
+; These are for the perfect 3us/1us timing described below
+#define LOOPS_SEND0_LOW		15
+#define LOOPS_SEND1_LOW		4
+#define LOOPS_SEND1_HIGH	10
+*/
 	/************************************************
 	* Send data using the N64/GC serial protocol which
 	* is as follows:
@@ -157,7 +174,7 @@ send_next_bit:
 send0:
 	sbi GCN64_DATA_DDR, GCN64_DATA_BIT   ; Pull bus to 0
 
-	ldi r20, 15
+	ldi r20, LOOPS_SEND0_LOW
 lp_send0_3us:
 	dec r20
 	brne lp_send0_3us
@@ -165,6 +182,12 @@ lp_send0_3us:
 
 	cbi GCN64_DATA_DDR, GCN64_DATA_BIT	; Release bus to 1
 
+#ifdef DELAY_SEND0_HIGH
+	ldi r20, DELAY_SEND0_HIGH
+lp_send0_1us:
+	dec r20
+	brne lp_send0_1us
+#endif
 
 	lsr r27
 	breq send_next_byte
@@ -179,7 +202,7 @@ lp_send0_3us:
 send1:
 	sbi GCN64_DATA_DDR, GCN64_DATA_BIT	; Pull bus to 0
 
-	ldi r20, 4
+	ldi r20, LOOPS_SEND1_LOW
 lp_send1_1us:
 	dec r20
 	brne lp_send1_1us
@@ -188,7 +211,7 @@ lp_send1_1us:
 
 	cbi GCN64_DATA_DDR, GCN64_DATA_BIT	; Release bus to 1
 
-	ldi r20, 10
+	ldi r20, LOOPS_SEND1_HIGH
 lp_send1_3us:
 	dec r20
 	brne lp_send1_3us
@@ -216,7 +239,7 @@ send_stop:
 	nop
 	; STOP BIT
 	sbi GCN64_DATA_DDR, GCN64_DATA_BIT ; Pull low for stop bit
-	ldi r20, 4
+	ldi r20, LOOPS_SEND1_LOW
 stbdly0:
 	dec r20
 	brne stbdly0
