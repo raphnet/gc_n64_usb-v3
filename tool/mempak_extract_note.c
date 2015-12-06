@@ -32,6 +32,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "could not export note\n");
 	}
 
+	printf("Exported note %d to file '%s'\n", note_id, outfile);
+
 	mempak_free(mpk);
 
 	return 0;
