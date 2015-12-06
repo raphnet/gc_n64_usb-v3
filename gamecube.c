@@ -156,6 +156,11 @@ static char gamecubeUpdate()
 	return 0;
 }
 
+static void gamecubeHotplug(void)
+{
+	// Make sure next read becomes the refence center values
+	origins_set = 0;
+}
 
 static char gamecubeProbe(void)
 {
@@ -191,6 +196,7 @@ Gamepad GamecubeGamepad = {
 	.getReport				= gamecubeGetReport,
 	.probe					= gamecubeProbe,
 	.setVibration			= gamecubeVibration,
+	.hotplug				= gamecubeHotplug,
 };
 
 Gamepad *gamecubeGetGamepad(void)

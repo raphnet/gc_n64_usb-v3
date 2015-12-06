@@ -305,6 +305,12 @@ int main(void)
 				/* Try to auto-detect controller if none*/
 				if (!pad) {
 					pad = detectPad();
+					if (pad->hotplug) {
+						// For gamecube, this make sure the next
+						// analog values we read become the center
+						// reference.
+						pad->hotplug();
+					}
 				}
 				if (pad) {
 					if (pad->update()) {

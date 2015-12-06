@@ -75,6 +75,7 @@ typedef struct {
 	void (*init)(void);
 	char (*update)(void);
 	char (*changed)(void);
+	void (*hotplug)(void);
 	void (*getReport)(gamepad_data *dst);
 	void (*setVibration)(char enable);
 	char (*probe)(void); /* return true if found */
