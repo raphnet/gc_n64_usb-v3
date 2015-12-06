@@ -37,7 +37,7 @@
 static void printUsage(void)
 {
 	printf("./gcn64_ctl [OPTION]... [COMMAND]....\n");
-	printf("Control tool for WUSBmote adapter. Version %s\n", VERSION_STR);
+	printf("Control tool for GC/N64 to USB adapter. Version %s\n", VERSION_STR);
 	printf("\n");
 	printf("Options:\n");
 	printf("  -h, --help            Print help\n");
@@ -287,8 +287,6 @@ int main(int argc, char **argv)
 		printf("Error opening device. (Do you have permissions?)\n");
 		return 1;
 	}
-
-	printf("Ready.\n");
 
 	optind = 1;
 	while((opt = getopt_long(argc, argv, short_optstr, longopts, NULL)) != -1)
