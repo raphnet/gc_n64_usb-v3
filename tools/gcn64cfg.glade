@@ -35,7 +35,7 @@ Author: Raphaël Assénat
     <property name="website">http://www.raphnet.net</property>
     <property name="website_label" translatable="yes">http://www.raphnet.net</property>
     <property name="authors">Raphaël Assénat</property>
-    <property name="logo">project_image.jpg</property>
+    <property name="logo">project_image.png</property>
     <property name="license_type">gpl-3-0</property>
     <signal name="response" handler="gtk_widget_hide" swapped="no"/>
     <child internal-child="vbox">
