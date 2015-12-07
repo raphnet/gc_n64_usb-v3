@@ -1,5 +1,5 @@
-/*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+/*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
+	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -15,11 +15,11 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* 
- * The original file gamepad.c contained this descriptor which was 
+/*
+ * The original file gamepad.c contained this descriptor which was
  * adapted from my original reportdesc.c by Sean Green for force
  * feedback support. Big thanks to him from sharing back!
- * 
+ *
  * The descriptor is intact, except for minor changes such as
  * axis types and button quantity.
  */
@@ -47,8 +47,8 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 		0x09, 0x34,						//	  USAGE (Ry)
 		0x09, 0x35,						//	  USAGE (Rz)
 		0x09, 0x36,						//	  USAGE (Slider)
-		0x81, 0x02,                    //     INPUT 
-    0xc0,               //  END COLLECTION                      
+		0x81, 0x02,                    //     INPUT
+    0xc0,               //  END COLLECTION
 
 #define NUM_BUTTONS	16
 
@@ -63,8 +63,8 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 		0x29, NUM_BUTTONS,                    //   USAGE_MAXIMUM (Button 14)
 		0x75, 0x01,                    //   REPORT_SIZE (1)
 		0x95, NUM_BUTTONS,                    //   REPORT_COUNT (16)
-		0x81, 0x02,                    // INPUT 
-    0xc0,               //  END COLLECTION                      
+		0x81, 0x02,                    // INPUT
+    0xc0,               //  END COLLECTION
 
 
    0x05,0x0F,        //    Usage Page Physical Interface
@@ -638,7 +638,4 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
    0xB1,0x03,                   //    Feature (Constant, Variable)
    0xC0,    //    End Collection
 0xC0,    //    End Collection
-
-
 };
-

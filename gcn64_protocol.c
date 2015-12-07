@@ -1,4 +1,4 @@
-/*	gc_n64_usb : Gamecube or N64 controller to USB firmware
+/*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
 	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify

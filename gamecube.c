@@ -1,24 +1,19 @@
-/* Extenmote : NES, SNES, N64 and Gamecube to Wii remote adapter firmware
- * Copyright (C) 2012  Raphael Assenat <raph@raphnet.net>
- *
- * Based on:
- *
- *  GC to N64 : Gamecube controller to N64 adapter firmware
- *  Copyright (C) 2011  Raphael Assenat <raph@raphnet.net>
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
+	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -46,8 +41,8 @@ void gc_decodeAnswer(unsigned char data[8])
 	unsigned char x,y,cx,cy;
 
 	// Note: Checking seems a good idea, adds protection
-	// against corruption (if the "constant" bits are invalid, 
-	// maybe others are : Drop the packet). 
+	// against corruption (if the "constant" bits are invalid,
+	// maybe others are : Drop the packet).
 	//
 	// However, I have seen bit 2 in a high state. To be as compatible
 	// as possible, I decided NOT to look at these bits since instead
@@ -61,7 +56,7 @@ void gc_decodeAnswer(unsigned char data[8])
 	if (!gcn64_workbuf[8])
 		return 1;
 #endif
-	
+
 /*
 	(Source: Nintendo Gamecube Controller Protocol
 		updated 8th March 2004, by James.)
@@ -203,4 +198,3 @@ Gamepad *gamecubeGetGamepad(void)
 {
 	return &GamecubeGamepad;
 }
-
