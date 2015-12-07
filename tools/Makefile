@@ -12,6 +12,7 @@ endif
 ifeq ($(shell uname -o), Msys)
 COMPAT_OBJS=sleep.o memmem.o strcasestr.o
 PLATFORM_CFLAGS=-DWINDOWS
+EXTRA_LDFLAGS=-mwindows # uncomment for console output
 endif
 
 CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99 $(PLATFORM_CFLAGS)
@@ -24,12 +25,12 @@ PREFIX=/usr/local
 PROGS=gcn64ctl mempak_ls mempak_format mempak_extract_note mempak_insert_note mempak_rm mempak_convert gcn64ctl_gui
 MEMPAKLIB_OBJS=mempak.o mempak_fs.o $(COMPAT_OBJS)
 
-.PHONY : clean install
+.PHONY : clean install release_windows
 
 all: $(PROGS) gui.xml
 
 gcn64ctl_gui: gcn64ctl_gui.o gcn64ctl_gui_mpkedit.o gcn64.o gcn64lib.o hexdump.o ihex.o mempak_gcn64usb.o $(MEMPAKLIB_OBJS)
-	$(LD) $^ $(LDFLAGS) $(GTK_LDFLAGS) -o $@
+	$(LD) $^ $(LDFLAGS) $(GTK_LDFLAGS) -o $@ $(EXTRA_LDFLAGS)
 
 gcn64ctl: main.o gcn64.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o mempak_gcn64usb.o $(MEMPAKLIB_OBJS)
 	$(LD) $^ $(LDFLAGS) -o $@
@@ -71,3 +72,7 @@ clean:
 install:
 	@echo "Install not done yet. Sorry"
 
+release_windows:
+	cp *.exe release_windows
+	cp gui.xml release_windows
+	cp project_image.png release_windows
