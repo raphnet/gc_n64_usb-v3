@@ -10,6 +10,10 @@ int gcn64lib_getConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *rx, 
 	unsigned char cmd[2];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_GET_CONFIG_PARAM;
 	cmd[1] = param;
 
@@ -31,6 +35,10 @@ int gcn64lib_setConfig(gcn64_hdl_t hdl, unsigned char param, unsigned char *data
 	unsigned char cmd[2 + len];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_SET_CONFIG_PARAM;
 	cmd[1] = param;
 	memcpy(cmd + 2, data, len);
@@ -47,6 +55,10 @@ int gcn64lib_suspendPolling(gcn64_hdl_t hdl, unsigned char suspend)
 	unsigned char cmd[2];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_SUSPEND_POLLING;
 	cmd[1] = suspend;
 
@@ -61,6 +73,10 @@ int gcn64lib_getVersion(gcn64_hdl_t hdl, char *dst, int dstmax)
 {
 	unsigned char cmd[32];
 	int n;
+
+	if (!hdl) {
+		return -1;
+	}
 
 	if (dstmax <= 0)
 		return -1;
@@ -84,6 +100,10 @@ int gcn64lib_getControllerType(gcn64_hdl_t hdl, int chn)
 {
 	unsigned char cmd[32];
 	int n;
+
+	if (!hdl) {
+		return -1;
+	}
 
 	cmd[0] = RQ_GCN64_GET_CONTROLLER_TYPE;
 	cmd[1] = chn;
@@ -114,6 +134,10 @@ int gcn64lib_getSignature(gcn64_hdl_t hdl, char *dst, int dstmax)
 	unsigned char cmd[40];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	if (dstmax <= 0)
 		return -1;
 
@@ -137,6 +161,10 @@ int gcn64lib_forceVibration(gcn64_hdl_t hdl, unsigned char channel, unsigned cha
 	unsigned char cmd[3];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_SET_VIBRATION;
 	cmd[1] = channel;
 	cmd[2] = vibrate;
@@ -154,6 +182,14 @@ int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char 
 	unsigned char rep[3 + 64];
 	int cmdlen, rx_len, n;
 
+	if (!hdl) {
+		return -1;
+	}
+
+	if (!tx) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_RAW_SI_COMMAND;
 	cmd[1] = channel;
 	cmd[2] = tx_len;
@@ -165,7 +201,9 @@ int gcn64lib_rawSiCommand(gcn64_hdl_t hdl, unsigned char channel, unsigned char 
 		return n;
 
 	rx_len = rep[2];
-	memcpy(rx, rep + 3, rx_len);
+	if (rx) {
+		memcpy(rx, rep + 3, rx_len);
+	}
 
 	return rx_len;
 }
@@ -174,6 +212,10 @@ int gcn64lib_16bit_scan(gcn64_hdl_t hdl, unsigned short min, unsigned short max)
 {
 	int id, n;
 	unsigned char buf[64];
+
+	if (!hdl) {
+		return -1;
+	}
 
 	for (id = min; id<=max; id++) {
 		buf[0] = id >> 8;
@@ -193,6 +235,10 @@ int gcn64lib_8bit_scan(gcn64_hdl_t hdl, unsigned char min, unsigned char max)
 	int id, n;
 	unsigned char buf[64];
 
+	if (!hdl) {
+		return -1;
+	}
+
 	for (id = min; id<=max; id++) {
 		buf[0] = id;
 		n = gcn64lib_rawSiCommand(hdl, 0, buf, 1, buf, sizeof(buf));
@@ -210,6 +256,10 @@ int gcn64lib_bootloader(gcn64_hdl_t hdl)
 	unsigned char cmd[4];
 	int cmdlen;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = RQ_GCN64_JUMP_TO_BOOTLOADER;
 	cmdlen = 1;
 
@@ -223,6 +273,10 @@ int gcn64lib_n64_expansionWrite(gcn64_hdl_t hdl, unsigned short addr, unsigned c
 	unsigned char cmd[3 + len];
 	int cmdlen;
 	int n;
+
+	if (!hdl) {
+		return -1;
+	}
 
 	cmd[0] = N64_EXPANSION_WRITE;
 	cmd[1] = addr>>8; // Address high byte
@@ -244,6 +298,10 @@ int gcn64lib_n64_expansionRead(gcn64_hdl_t hdl, unsigned short addr, unsigned ch
 	unsigned char cmd[3];
 	int n;
 
+	if (!hdl) {
+		return -1;
+	}
+
 	cmd[0] = N64_EXPANSION_READ;
 	cmd[1] = addr>>8; // Address high byte
 	cmd[2] = addr&0xff; // Address low byte
@@ -254,4 +312,3 @@ int gcn64lib_n64_expansionRead(gcn64_hdl_t hdl, unsigned short addr, unsigned ch
 
 	return n;
 }
-

@@ -252,7 +252,9 @@ int gcn64_poll_result(gcn64_hdl_t hdl, unsigned char *cmd, int cmd_maxlen)
 		if (copy_len > cmd_maxlen) {
 			copy_len = cmd_maxlen;
 		}
-		memcpy(cmd, buffer+1, copy_len);
+		if (cmd) {
+			memcpy(cmd, buffer+1, copy_len);
+		}
 	}
 
 	return res_len;
