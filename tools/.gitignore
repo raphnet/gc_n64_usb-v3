@@ -1,7 +1,13 @@
 gui.xml
+gcn64cfg.glade~
 mempak_convert
 mempak_extract_note
 mempak_format
 mempak_insert_note
 mempak_ls
 mempak_rm
+gcn64ctl
+gcn64ctl_gui
+*.swp
+*.mpk
+*.n64
