@@ -1,6 +1,7 @@
 #ifndef USBPAD_H__
 #define USBPAD_H__
 
+#include "gamepads.h"
 #include "usb.h"
 
 void usbpad_init(void);
