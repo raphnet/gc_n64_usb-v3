@@ -35,7 +35,7 @@ Author: Raphaël Assénat
     <property name="website">http://www.raphnet.net</property>
     <property name="website_label" translatable="yes">http://www.raphnet.net</property>
     <property name="authors">Raphaël Assénat</property>
-    <property name="logo_icon_name">image-x-generic</property>
+    <property name="logo">project_image.jpg</property>
     <property name="license_type">gpl-3-0</property>
     <signal name="response" handler="gtk_widget_hide" swapped="no"/>
     <child internal-child="vbox">
@@ -80,7 +80,9 @@ Author: Raphaël Assénat
   <object class="GtkImage" id="image1">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="stock">gtk-missing-image</property>
+    <property name="stock">gtk-find</property>
+    <property name="use_fallback">True</property>
+    <property name="icon_size">1</property>
   </object>
   <object class="GtkImage" id="image2">
     <property name="visible">True</property>
@@ -149,11 +151,13 @@ Author: Raphaël Assénat
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkImageMenuItem" id="imagemenuitem1">
-                        <property name="label">Rescan adapters</property>
+                        <property name="label">_Rescan adapters</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
                         <property name="image">image1</property>
                         <property name="use_stock">False</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="onFileRescan" swapped="no"/>
                       </object>
                     </child>
@@ -170,6 +174,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="gtk_main_quit" object="mainWindow" swapped="yes"/>
                       </object>
                     </child>
@@ -217,6 +222,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="gtk_widget_show" object="aboutdialog1" swapped="yes"/>
                       </object>
                     </child>
@@ -910,6 +916,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="mpke_new" swapped="no"/>
                       </object>
                     </child>
@@ -920,6 +927,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="mpke_open" swapped="no"/>
                       </object>
                     </child>
@@ -930,6 +938,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="mpke_save" swapped="no"/>
                       </object>
                     </child>
@@ -940,6 +949,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="mpke_saveas" swapped="no"/>
                       </object>
                     </child>
@@ -956,6 +966,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="gtk_widget_hide" object="win_mempak_edit" swapped="yes"/>
                       </object>
                     </child>
@@ -998,6 +1009,7 @@ Author: Raphaël Assénat
                         <property name="can_focus">False</property>
                         <property name="image">image2</property>
                         <property name="use_stock">False</property>
+                        <property name="always_show_image">True</property>
                         <signal name="activate" handler="mpke_delete" swapped="no"/>
                       </object>
                     </child>
