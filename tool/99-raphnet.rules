@@ -1,1 +1,0 @@
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="289b", ATTRS{idProduct}=="0017", MODE="0664", GROUP="plugdev" 

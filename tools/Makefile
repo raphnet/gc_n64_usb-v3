@@ -26,7 +26,7 @@ MEMPAKLIB_OBJS=mempak.o mempak_fs.o $(COMPAT_OBJS)
 
 .PHONY : clean install
 
-all: $(PROGS)
+all: $(PROGS) gui.xml
 
 gcn64ctl_gui: gcn64ctl_gui.o gcn64ctl_gui_mpkedit.o gcn64.o gcn64lib.o hexdump.o ihex.o mempak_gcn64usb.o $(MEMPAKLIB_OBJS)
 	$(LD) $^ $(LDFLAGS) $(GTK_LDFLAGS) -o $@
@@ -36,6 +36,9 @@ gcn64ctl: main.o gcn64.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o me
 
 gcn64ctl_gui.o: gcn64ctl_gui.c gcn64ctl_gui.h
 	$(CC) $(CFLAGS) $(GTK_CFLAGS) -c $<
+
+gui.xml: gcn64cfg.glade
+	grep -v requires gcn64cfg.glade > gui.xml
 
 gcn64ctl_gui_mpkedit.o: gcn64ctl_gui_mpkedit.c gcn64ctl_gui_mpkedit.h
 	$(CC) $(CFLAGS) $(GTK_CFLAGS) -c $<
