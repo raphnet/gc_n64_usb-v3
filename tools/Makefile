@@ -10,7 +10,7 @@ endif
 
 
 ifeq ($(shell uname -o), Msys)
-COMPAT_OBJS=sleep.o memmem.o strcasestr.o
+COMPAT_OBJS=sleep.o memmem.o strcasestr.o app.o
 PLATFORM_CFLAGS=-DWINDOWS
 EXTRA_LDFLAGS=-mwindows # uncomment for console output
 endif
@@ -37,6 +37,9 @@ gcn64ctl: main.o gcn64.o gcn64lib.o hexdump.o gc2n64_adapter.o ihex.o delay.o me
 
 gcn64ctl_gui.o: gcn64ctl_gui.c gcn64ctl_gui.h
 	$(CC) $(CFLAGS) $(GTK_CFLAGS) -c $<
+
+app.o: app.rc icon.ico
+	windres app.rc -o app.o
 
 gui.xml: gcn64cfg.glade
 	grep -v requires gcn64cfg.glade > gui.xml
