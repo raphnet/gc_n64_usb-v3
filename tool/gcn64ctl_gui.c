@@ -224,12 +224,14 @@ G_MODULE_EXPORT void updatestart_btn_clicked_cb(GtkWidget *w, gpointer data)
 void deselect_adapter(struct application *app)
 {
 	GET_UI_ELEMENT(GtkComboBox, cb_adapter_list);
+	GtkWidget *adapter_details = GTK_WIDGET( gtk_builder_get_object(app->builder, "adapterDetails") );
 
 	printf("deselect adapter\n");
 
 	if (app->current_adapter_handle) {
 		gcn64_closeDevice(app->current_adapter_handle);
 		app->current_adapter_handle = NULL;
+		gtk_widget_set_sensitive(adapter_details, FALSE);
 	}
 
 	gtk_combo_box_set_active_iter(cb_adapter_list, NULL);
