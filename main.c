@@ -196,11 +196,11 @@ void hwinit(void)
 	 * 4: NC	Output low
 	 * 3: (no such pin)
 	 * 2: NC	Output low
-	 * 1: RESET	(N/A: Reset input per fuses)
-	 * 0: XTAL2	(N/A: Crystal oscillator)
+	 * 1: RESET	(N/A: Reset input per fuses) (left floating)
+	 * 0: XTAL2	(N/A: Crystal oscillator) (left floating)
 	 */
-	PORTB = 0x00;
-	DDRB = 0xff;
+	DDRC = 0xfc;
+	PORTC = 0x00;
 
 	/* PORTD
 	 *
