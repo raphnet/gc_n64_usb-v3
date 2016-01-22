@@ -1,5 +1,6 @@
 CC=gcc
 LD=$(CC)
+VERSION=1.0
 
 UNAME := $(shell uname -s)
 ifeq ($(UNAME), Linux)
@@ -13,6 +14,7 @@ ifeq ($(shell uname -o), Msys)
 COMPAT_OBJS=sleep.o memmem.o strcasestr.o app.o
 PLATFORM_CFLAGS=-DWINDOWS
 EXTRA_LDFLAGS=-mwindows # uncomment for console output
+MAKENSIS=/c/Program\ Files\ \(x86\)/NSIS/makensis
 endif
 
 CFLAGS=-Wall -g `pkg-config $(HIDAPI_NAME) --cflags` --std=c99 $(PLATFORM_CFLAGS)
@@ -76,6 +78,9 @@ install:
 	@echo "Install not done yet. Sorry"
 
 release_windows:
-	cp *.exe release_windows
+	cp $(addsuffix .exe,$(PROGS)) release_windows
 	cp gui.xml release_windows
 	cp project_image.png release_windows
+	$(MAKENSIS) //DVERSION=$(VERSION) gcn64ctl.nsi
+	ls installers
+	@echo "Done"
