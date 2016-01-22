@@ -67,9 +67,10 @@ SectionEnd
 ; Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
 
-  CreateDirectory "$SMPROGRAMS\raphnet-tech gcn64ctl"
-  CreateShortCut "$SMPROGRAMS\raphnet-tech gcn64ctl\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\raphnet-tech gcn64ctl\gcn64ctl.lnk" "$INSTDIR\gcn64ctl_gui.exe" "" "$INSTDIR\gcn64ctl_gui.exe" 0
+  CreateDirectory "$SMPROGRAMS\raphnet-tech GC/N64 adapter manager"
+  CreateShortCut "$SMPROGRAMS\raphnet-tech GC/N64 adapter manager\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+  CreateShortCut "$SMPROGRAMS\raphnet-tech GC/N64 adapter manager\Commandi-line tools.lnk" "$SYSDIR\cmd.exe" '/K "cd /d $INSTDIR"' "$SYSDIR\cmd.exe" 0
+  CreateShortCut "$SMPROGRAMS\raphnet-tech GC/N64 adapter manager\GC/N64 adapter manager.lnk" "$INSTDIR\gcn64ctl_gui.exe" "" "$INSTDIR\gcn64ctl_gui.exe" 0
   
 SectionEnd
 
@@ -87,7 +88,7 @@ Section "Uninstall"
   Delete "$INSTDIR\*.*"
 
   ; Remove shortcuts, if any
-  Delete "$SMPROGRAMS\gcn64ctl\*.*"
+  Delete "$SMPROGRAMS\raphnet-tech GC/N64 adapter manager\*.*"
 
   ; Remove directories used
   RMDir "$SMPROGRAMS\gcn64ctl"
