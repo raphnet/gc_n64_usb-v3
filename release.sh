@@ -9,7 +9,8 @@ if [ $# -ne 2 ]; then
 	echo "Syntax: ./release.sh version releasedir"
 	echo
 	echo "ex: './release 1.0' will produce $PREFIX-1.0.tar.gz in releasedir out of git HEAD,"
-	exit "untar it, build the firmware and create $PREFIX-1.0.hex in releasedir."
+	echo "untar it, build the firmware and create $PREFIX-1.0.hex in releasedir."
+	exit
 fi
 
 VERSION=$1
