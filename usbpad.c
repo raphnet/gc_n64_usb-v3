@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@
 static volatile unsigned char gamepad_vibrate = 0; // output
 static unsigned char vibration_on = 0, force_vibrate = 0;
 static unsigned char constant_force = 0;
-static unsigned char magnitude = 0;
+static unsigned char periodic_magnitude = 0;
 
 static unsigned char _FFB_effect_index;
 #define LOOP_MAX    0xFFFF
@@ -238,9 +238,10 @@ char usbpad_mustVibrate(void)
 	} else {
 		if (constant_force > 0x7f) {
 			gamepad_vibrate = 1;
-		}
-		if (magnitude > 0x7f) {
+		} else if (periodic_magnitude > 0x7f) {
 			gamepad_vibrate = 1;
+		} else {
+			gamepad_vibrate = 0;
 		}
 	}
 
@@ -341,23 +342,25 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 				break;
 			case REPORT_DISABLE_ACTUATORS:
 				printf_P(PSTR("disable actuators\r\n"));
+				periodic_magnitude = 0;
+				constant_force = 0;
+				vibration_on = 0;
 				break;
 			case REPORT_PID_POOL:
 				printf_P(PSTR("pid pool\r\n"));
 				break;
 			case REPORT_SET_EFFECT:
 				_FFB_effect_index = data[1];
-				printf_P(PSTR("set effect %d\n"), data[1]);
+				printf_P(PSTR("set effect %d\r\n"), data[1]);
 				break;
 			case REPORT_SET_PERIODIC:
-				magnitude = data[2];
+				periodic_magnitude = data[2];
 				printf_P(PSTR("periodic mag: %d"), data[2]);
 				break;
 			case REPORT_SET_CONSTANT_FORCE:
 				if (data[1] == 1) {
 					constant_force = data[2];
-					//decideVibration();
-					printf_P(PSTR("Constant force"));
+					printf_P(PSTR("Constant force %d\r\n"), data[2]);
 				}
 				break;
 			case REPORT_EFFECT_OPERATION:
@@ -381,19 +384,16 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 							case EFFECT_OP_START:
 								printf_P(PSTR("Start\r\n"));
 								vibration_on = 1;
-				//				decideVibration();
 								break;
 
 							case EFFECT_OP_START_SOLO:
 								printf_P(PSTR("Start solo\r\n"));
 								vibration_on = 1;
-				//				decideVibration();
 								break;
 
 							case EFFECT_OP_STOP:
 								printf_P(PSTR("Stop\r\n"));
 								vibration_on = 0;
-	//							decideVibration();
 								break;
 						}
 						break;
