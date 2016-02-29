@@ -1,3 +1,6 @@
+- February 29, 2016 : Version 3.1.0
+  - Fix vibration code for x360ce (Was always on)
+
 - February 24, 2016 : Version 3.1.0
   - Add a test rumble command (for GUI tool, or for simple rumble control)
   - Adjust Gamecube/N64 wire protocol timing (Fixes Mad Catz controller)
