@@ -41,12 +41,18 @@ const uint8_t gcn64_usbHidReportDescriptor[] PROGMEM = {
 		0x15, 0x00,                     //     LOGICAL_MINIMUM (0)
 		0x26, 0x00, 0x7D,            //     LOGICAL_MAXIMUM (32000)
 
+		// Main analog stick
 		0x09, 0x30,                    //     USAGE (X)
 		0x09, 0x31,                    //     USAGE (Y)
+
+		// Gamecube C-stick
 		0x09, 0x33,					   //     USAGE (Rx)
 		0x09, 0x34,						//	  USAGE (Ry)
+
+		// Triggers
 		0x09, 0x35,						//	  USAGE (Rz)
-		0x09, 0x36,						//	  USAGE (Slider)
+		0x09, 0x32,						//	  USAGE (Z)
+
 		0x81, 0x02,                    //     INPUT
     0xc0,               //  END COLLECTION
 
