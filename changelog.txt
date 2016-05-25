@@ -1,8 +1,7 @@
-- May 22, 2016 : VErsion 3.2.0
-  - Fix reconnecting in loop in MacOS X
-  - Change gamecube trigger HID usage (Slider became Z). Now it works fine in
-  openEMU.
-  - Version string changed
+- May 22, 2016 : Version 3.2.0
+  - Fix reconnecting loop in MacOS X
+  - Change gamecube trigger HID usage (Slider became Z). Now it works fine in openEMU.
+  - Version and product string updated
   - USB product ID changed
 
 - February 29, 2016 : Version 3.1.1
