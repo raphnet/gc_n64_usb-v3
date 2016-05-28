@@ -1,8 +1,8 @@
 - May 22, 2016 : Version 3.2.0
   - Fix reconnecting loop in MacOS X
   - Change gamecube trigger HID usage (Slider became Z). Now it works fine in openEMU.
-  - Version and product string updated
-  - USB product ID changed
+  - Version and product string updated.
+  - USB product ID changed.
 
 - February 29, 2016 : Version 3.1.1
   - Fix vibration code for x360ce (Was always on)
