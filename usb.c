@@ -24,6 +24,8 @@
 
 #include "usb.h"
 
+#undef VERBOSE
+
 #define STATE_POWERED		0
 #define STATE_DEFAULT		1
 #define STATE_ADDRESS		2
@@ -94,6 +96,20 @@ static void setupEndpoints(void)
 		printf_P(PSTR("CFG EP1 fail\r\n"));
 		return;
 	}
+
+	/*** EP2 ***/
+	UENUM = 0x02;  // select endpoint
+
+	UECONX = 1<<EPEN; // activate endpoint
+	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
+	//UEIENX = (1<<TXINE);
+	UECFG1X |= (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
+	UEINTX = 0;
+
+	if (!(UESTA0X & (1<<CFGOK))) {
+		printf_P(PSTR("CFG EP2 fail\r\n"));
+		return;
+	}
 }
 
 // Requires UENUM already set
@@ -145,7 +161,9 @@ static void handleSetupPacket(struct usb_request *rq)
 {
 	char unhandled = 0;
 
-//	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
+#ifdef VERBOSE
+	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
+#endif
 
 	if (USB_RQT_IS_HOST_TO_DEVICE(rq->bmRequestType))
 	{
@@ -160,7 +178,9 @@ static void handleSetupPacket(struct usb_request *rq)
 						UEINTX &= ~(1<<TXINI);
 						while (!(UEINTX & (1<<TXINI)));
 						UDADDR |= (1<<ADDEN);
+#ifdef VERBOSE
 						printf_P(PSTR("Addr: %d\r\n"), rq->wValue);
+#endif
 						if (!rq->wValue) {
 							g_device_state = STATE_DEFAULT;
 						} else {
@@ -177,7 +197,9 @@ static void handleSetupPacket(struct usb_request *rq)
 						}
 						while (!(UEINTX & (1<<TXINI)));
 						UEINTX &= ~(1<<TXINI);
+#ifdef VERBOSE
 						printf_P(PSTR("Configured: %d\r\n"), g_current_config);
+#endif
 						break;
 
 					default:
@@ -460,7 +482,7 @@ static void handleSetupPacket(struct usb_request *rq)
 	} // IS DEVICE-TO-HOST
 
 	if (unhandled) {
-//		printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue);
+		printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue);
 		UECONX |= (1<<STALLRQ);
 	}
 }
@@ -506,7 +528,9 @@ ISR(USB_GEN_vect)
 		UDINT &= ~(1<<SUSPI);
 		g_usb_suspend = 1;
 		UDIEN |= (1<<WAKEUPE);
-//		printf_P(PSTR("SUSPI\r\n"));
+#ifdef VERBOSE
+		printf_P(PSTR("SUSPI\r\n"));
+#endif
 		// CPU could now be put in low power mode. Later,
 		// WAKEUPI would wake it up.
 	}
@@ -516,13 +540,15 @@ ISR(USB_GEN_vect)
 		UDINT &= ~(1<<WAKEUPE);
 		if (g_usb_suspend) {
 			g_usb_suspend = 0;
-//			printf_P(PSTR("WAKEUPI\r\n"));
+			printf_P(PSTR("WAKEUPI\r\n"));
 			UDIEN &= ~(1<<WAKEUPE); // woke up. Not needed anymore.
 		}
 	}
 
 	if (i & (1<<EORSTI)) {
-//		printf_P(PSTR("EORSTI\r\n"));
+#ifdef VERBOSE
+		printf_P(PSTR("EORSTI\r\n"));
+#endif
 		g_usb_suspend = 0;
 		setupEndpoints();
 		UDINT &= ~(1<<EORSTI);
@@ -530,17 +556,23 @@ ISR(USB_GEN_vect)
 
 	if (i & (1<<SOFI)) {
 		UDINT &= ~(1<<SOFI);
-//		printf_P(PSTR("SOFI\r\n"));
+#ifdef VERBOSE
+		printf_P(PSTR("SOFI\r\n"));
+#endif
 	}
 
 	if (i & (1<<EORSMI)) {
 		UDINT &= ~(1<<EORSMI);
-//		printf_P(PSTR("EORSMI\r\n"));
+#ifdef VERBOSE
+		printf_P(PSTR("EORSMI\r\n"));
+#endif
 	}
 
 	if (i & (1<<UPRSMI)) {
 		UDINT &= ~(1<<UPRSMI);
+#ifdef VERBOSE
 		printf_P(PSTR("UPRSMI\r\n"));
+#endif
 	}
 }
 
@@ -664,7 +696,9 @@ void usb_doTasks(void)
 #ifdef USBSTA
 			if (USBSTA & (1<<VBUS)) {
 #endif
+#ifdef VERBOSE
 				printf_P(PSTR("ATTACH\r\n"));
+#endif
 				UDCON &= ~(1<<DETACH); // clear DETACH bit
 				usb_state = STATE_ATTACHED;
 #ifdef USBSTA
