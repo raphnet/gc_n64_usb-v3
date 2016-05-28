@@ -89,7 +89,7 @@ static void setupEndpoints(void)
 	UECONX = 1<<EPEN; // activate endpoint
 	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
 	UEIENX = (1<<TXINE);
-	UECFG1X |= (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
+	UECFG1X |= (1<<EPSIZE1)|(1<<ALLOC); // 32 bytes, one bank, and allocate
 	UEINTX = 0;
 
 	if (!(UESTA0X & (1<<CFGOK))) {
@@ -102,8 +102,8 @@ static void setupEndpoints(void)
 
 	UECONX = 1<<EPEN; // activate endpoint
 	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
-	//UEIENX = (1<<TXINE);
-	UECFG1X |= (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
+//	UEIENX = (1<<TXINE);
+	UECFG1X = (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
 	UEINTX = 0;
 
 	if (!(UESTA0X & (1<<CFGOK))) {

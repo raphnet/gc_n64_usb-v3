@@ -91,7 +91,7 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.bDescriptorType = ENDPOINT_DESCRIPTOR,
 		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 1, // 0x81
 		.bmAttributes = TRANSFER_TYPE_INT,
-		.wMaxPacketsize = 64,
+		.wMaxPacketsize = 32,
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
 
