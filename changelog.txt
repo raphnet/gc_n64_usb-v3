@@ -1,3 +1,7 @@
+- August 22, 2016 : Version 3.2.1
+  - Implement N64-only and GC-only personalities (Different product ID and
+  device name)
+
 - May 22, 2016 : Version 3.2.0
   - Fix reconnecting loop in MacOS X
   - Change gamecube trigger HID usage (Slider became Z). Now it works fine in openEMU.

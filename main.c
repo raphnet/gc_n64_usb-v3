@@ -36,6 +36,11 @@
 #include "hiddata.h"
 #include "usbstrings.h"
 #include "intervaltimer.h"
+#include "requests.h"
+
+#define GCN64_USB_PID	0x001D
+#define N64_USB_PID		0x0020
+#define GC_USB_PID		0x0021
 
 /* Those .c files are included rather than linked for we
  * want the sizeof() operator to work on the arrays */
@@ -126,7 +131,7 @@ static const struct cfg0 cfg0 PROGMEM = {
 
 };
 
-const struct usb_device_descriptor device_descriptor = {
+struct usb_device_descriptor device_descriptor = {
 	.bLength = sizeof(struct usb_device_descriptor),
 	.bDescriptorType = DEVICE_DESCRIPTOR,
 	.bcdUSB = 0x0101,
@@ -135,7 +140,7 @@ const struct usb_device_descriptor device_descriptor = {
 	.bDeviceProtocol = 0,
 	.bMaxPacketSize = 64,
 	.idVendor = 0x289B,
-	.idProduct = 0x001D,
+	.idProduct = GCN64_USB_PID,
 	.bcdDevice = 0x0300, // 1.0.0
 	.bNumConfigurations = 1,
 	.iManufacturer = 1,
@@ -293,6 +298,23 @@ int main(void)
 	intervaltimer_init();
 
 	usbpad_init();
+
+	switch (g_eeprom_data.cfg.mode)
+	{
+		default:
+		case CFG_MODE_STANDARD:
+			break;
+
+		case CFG_MODE_N64_ONLY:
+			usbstrings_changeProductString(L"N64 to USB v"VERSIONSTR_SHORT);
+			device_descriptor.idProduct = N64_USB_PID;
+			break;
+
+		case CFG_MODE_GC_ONLY:
+			usbstrings_changeProductString(L"Gamecube to USB v"VERSIONSTR_SHORT);
+			device_descriptor.idProduct = GC_USB_PID;
+			break;
+	}
 
 	sei();
 	usb_init(&usb_params);
