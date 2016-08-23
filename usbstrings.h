@@ -8,4 +8,6 @@ extern const wchar_t *g_usb_strings[];
 /* Array indexes (i.e. zero-based0 */
 #define USB_STRING_SERIAL_IDX	2
 
+void usbstrings_changeProductString(const wchar_t *str);
+
 #endif
