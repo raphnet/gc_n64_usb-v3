@@ -14,7 +14,11 @@
 
 /* Configuration parameters and constants */
 #define CFG_PARAM_MODE			0x00
+
+/* Values for mode */
 #define CFG_MODE_STANDARD   	0x00
+#define CFG_MODE_N64_ONLY		0x01
+#define CFG_MODE_GC_ONLY		0x02
 
 #define CFG_PARAM_SERIAL		0x01
 
