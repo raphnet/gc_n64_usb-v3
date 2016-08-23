@@ -48,6 +48,8 @@
 #define PID_SIMULTANEOUS_MAX	3
 #define PID_BLOCK_LOAD_REPORT	2
 
+static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE]);
+
 static volatile unsigned char gamepad_vibrate = 0; // output
 static unsigned char vibration_on = 0, force_vibrate = 0;
 static unsigned char constant_force = 0;
@@ -62,6 +64,7 @@ static unsigned char hid_report_data[8]; // Used for force feedback
 
 void usbpad_init()
 {
+	buildIdleReport(gamepad_report0);
 }
 
 int usbpad_getReportSize(void)
@@ -270,7 +273,7 @@ uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat)
 					// interface = rq->wIndex
 					*dat = gamepad_report0;
 					printf_P(PSTR("Get joy report\r\n"));
-					return 9;
+					return REPORT_SIZE;
 				} else if (report_id == 2) { // 2 : ES playing
 					hid_report_data[0] = report_id;
 					hid_report_data[1] = 0;
