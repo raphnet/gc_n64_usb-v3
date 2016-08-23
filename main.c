@@ -293,8 +293,7 @@ int main(void)
 	eeprom_init();
 	intervaltimer_init();
 
-	/* Init the buffer with idle data */
-	usbpad_update(NULL);
+	usbpad_init();
 
 	sei();
 	usb_init(&usb_params);
