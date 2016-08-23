@@ -126,7 +126,7 @@ static const struct cfg0 cfg0 PROGMEM = {
 
 };
 
-const struct usb_device_descriptor device_descriptor PROGMEM = {
+const struct usb_device_descriptor device_descriptor = {
 	.bLength = sizeof(struct usb_device_descriptor),
 	.bDescriptorType = DEVICE_DESCRIPTOR,
 	.bcdUSB = 0x0101,
@@ -147,7 +147,6 @@ const struct usb_device_descriptor device_descriptor PROGMEM = {
 
 static struct usb_parameters usb_params = {
 	.flags = USB_PARAM_FLAG_CONFDESC_PROGMEM |
-				USB_PARAM_FLAG_DEVDESC_PROGMEM |
 					USB_PARAM_FLAG_REPORTDESC_PROGMEM,
 	.devdesc = (PGM_VOID_P)&device_descriptor,
 	.configdesc = (PGM_VOID_P)&cfg0,
