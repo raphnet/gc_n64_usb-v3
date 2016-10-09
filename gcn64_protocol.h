@@ -160,7 +160,12 @@
 #define GC_KEY_ENTER			0x61
 
 void gcn64protocol_hwinit(void);
-int gcn64_detectController(void);
-unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max);
+
+#define GCN64_CHANNEL_0			0
+#define GCN64_CHANNEL_1			1
+#define GCN64_CHANNEL_2			2
+#define GCN64_CHANNEL_3			3
+int gcn64_detectController(unsigned char chn);
+unsigned char gcn64_transaction(unsigned char chn, const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max);
 
 #endif // _gcn64_protocol_h__

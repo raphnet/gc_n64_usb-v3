@@ -76,7 +76,7 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 
 static void hiddata_processCommandBuffer(void)
 {
-	//unsigned char channel;
+	unsigned char channel;
 #ifdef DEBUG
 	int i;
 #endif
@@ -95,8 +95,8 @@ static void hiddata_processCommandBuffer(void)
 		case RQ_GCN64_RAW_SI_COMMAND:
 			// TODO : Range checking
 			// cmdbuf[] : RQ, CHN, LEN, data[]
-			//channel = cmdbuf[1];
-			cmdbuf_len = gcn64_transaction(cmdbuf+3, cmdbuf[2], cmdbuf + 3, CMDBUF_SIZE-3);
+			channel = cmdbuf[1];
+			cmdbuf_len = gcn64_transaction(channel, cmdbuf+3, cmdbuf[2], cmdbuf + 3, CMDBUF_SIZE-3);
 			cmdbuf[2] = cmdbuf_len;
 			cmdbuf_len += 3; // Answer: RQ, CHN, LEN, data[]
 			break;

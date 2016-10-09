@@ -31,13 +31,19 @@
 	#define GCN64_DATA_PORT	PORTD
 	#define GCN64_DATA_DDR	DDRD
 	#define GCN64_DATA_PIN	PIND
-	#define GCN64_DATA_BIT	(1<<0)
+	#define GCN64_DATA_BIT0	(1<<0)
+	#define GCN64_DATA_BIT1	(1<<1)
+	#define GCN64_DATA_BIT2	(1<<2)
+	#define GCN64_DATA_BIT3	(1<<3)
 	#define GCN64_BIT_NUM_S	"0" // for asm
 #else
 	#define GCN64_DATA_PORT	PORTA
 	#define GCN64_DATA_DDR	DDRA
 	#define GCN64_DATA_PIN	PINA
-	#define GCN64_DATA_BIT	(1<<0)
+	#define GCN64_DATA_BIT0	(1<<0)
+	#define GCN64_DATA_BIT1	(1<<2) // This is not an error
+	#define GCN64_DATA_BIT2	(1<<1) // This is not an error
+	#define GCN64_DATA_BIT3	(1<<3)
 	#define GCN64_BIT_NUM_S	"0" // for asm
 #endif
 
@@ -46,11 +52,11 @@
 void gcn64protocol_hwinit(void)
 {
 	// data as input
-	GCN64_DATA_DDR &= ~(GCN64_DATA_BIT);
+	GCN64_DATA_DDR &= ~(GCN64_DATA_BIT0 | GCN64_DATA_BIT1 | GCN64_DATA_BIT2 | GCN64_DATA_BIT3);
 
 	// keep data low. By toggling the direction, we make the
 	// pin act as an open-drain output.
-	GCN64_DATA_PORT &= ~GCN64_DATA_BIT;
+	GCN64_DATA_PORT &= ~(GCN64_DATA_BIT0 | GCN64_DATA_BIT1 | GCN64_DATA_BIT2 | GCN64_DATA_BIT3);
 
 	/* debug bit PORTB4 (MISO) */
 	DDRB |= 0x10;
@@ -59,11 +65,15 @@ void gcn64protocol_hwinit(void)
 
 /**
  * \brief Send n data bytes + stop bit, wait for answer.
- * \return The number of bytes received, 0 on timeout/error.
  *
- * The result is in gcn64_workbuf.
+ * \param chn Channel (0 to 3)
+ * \param tx Data to be transmitted
+ * \param tx_len Transmission length
+ * \param rx Reception buffer
+ * \param rx_max Buffer size
+ * \return The number of bytes received, 0 on timeout/error.
  */
-unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max)
+unsigned char gcn64_transaction(unsigned char chn, const unsigned char *tx, int tx_len, unsigned char *rx, unsigned char rx_max)
 {
 	int count;
 	unsigned char sreg = SREG;
@@ -81,8 +91,8 @@ unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned ch
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
 #endif
-	gcn64_sendBytes(tx, tx_len);
-	count = gcn64_receiveBytes(rx, rx_max);
+	gcn64_sendBytes0(tx, tx_len);
+	count = gcn64_receiveBytes0(rx, rx_max);
 	SREG = sreg;
 
 	if (count == 0xff) {
@@ -119,14 +129,14 @@ unsigned char gcn64_transaction(const unsigned char *tx, int tx_len, unsigned ch
 #if (GC_GETID != 	N64_GET_CAPABILITIES)
 #error N64 vs GC detection commnad broken
 #endif
-int gcn64_detectController(void)
+int gcn64_detectController(unsigned char chn)
 {
 	unsigned char tmp = GC_GETID;
 	unsigned char count;
 	unsigned short id;
 	unsigned char data[4];
 
-	count = gcn64_transaction(&tmp, 1, data, sizeof(data));
+	count = gcn64_transaction(chn, &tmp, 1, data, sizeof(data));
 	if (count == 0) {
 		return CONTROLLER_IS_ABSENT;
 	}

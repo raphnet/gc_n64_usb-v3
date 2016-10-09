@@ -60,7 +60,7 @@ static char initRumble(void)
 	tmpdata[2] = 0x01;
 	memset(tmpdata+3, 0x80, 32);
 
-	count = gcn64_transaction(tmpdata, 35, data, sizeof(data));
+	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
@@ -76,7 +76,7 @@ static char controlRumble(char enable)
 	tmpdata[1] = 0xc0;
 	tmpdata[2] = 0x1b;
 	memset(tmpdata+3, enable ? 0x01 : 0x00, 32);
-	count = gcn64_transaction(tmpdata, 35, data, sizeof(data));
+	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
@@ -101,7 +101,7 @@ static char n64Update(void)
 	 * Bit 1 tells is if there was something connected that has been removed.
 	 */
 	tmpdata[0] = N64_GET_CAPABILITIES;
-	count = gcn64_transaction(tmpdata, 1, caps, sizeof(caps));
+	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 1, caps, sizeof(caps));
 	if (count != N64_CAPS_REPLY_LENGTH) {
 		// a failed read could mean the pack or controller was gone. Init
 		// will be necessary next time we detect a pack is present.
@@ -172,7 +172,7 @@ static char n64Update(void)
 	}
 
 	tmpdata[0] = N64_GET_STATUS;
-	count = gcn64_transaction(tmpdata, 1, status, sizeof(status));
+	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 1, status, sizeof(status));
 	if (count != N64_GET_STATUS_REPLY_LENGTH) {
 		return -1;
 	}
@@ -274,7 +274,7 @@ static char n64Probe(void)
 		_delay_ms(30);
 
 		tmp = N64_GET_CAPABILITIES;
-		count = gcn64_transaction(&tmp, 1, data, sizeof(data));
+		count = gcn64_transaction(GCN64_CHANNEL_0, &tmp, 1, data, sizeof(data));
 
 		if (count == N64_CAPS_REPLY_LENGTH) {
 			return 1;

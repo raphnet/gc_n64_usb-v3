@@ -235,7 +235,7 @@ unsigned char current_pad_type = CONTROLLER_IS_ABSENT;
 
 Gamepad *detectPad(void)
 {
-	current_pad_type = gcn64_detectController();
+	current_pad_type = gcn64_detectController(GCN64_CHANNEL_0);
 
 	switch (current_pad_type)
 	{

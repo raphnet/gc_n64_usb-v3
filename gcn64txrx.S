@@ -1,8 +1,20 @@
 #include <avr/io.h>
 
+; When compiling, you must define the following.
+;
+; SUFFIX         : The suffix for exported function (eg: Set to 0 to generate gcn64_sendBytes0)
+; GCN64_DATA_BIT : The bit number in the port.
+;
+; Port and Pin IOs are defined below.
+;
+
+#define CONCAT(a,b)	a##b
+#define EXPORT_SYMBOL(a, b)	.global CONCAT(a,b)
+#define FUNCTION(a, b)		CONCAT(a,b)
+
 .text
-.global gcn64_sendBytes
-.global gcn64_receiveBytes
+EXPORT_SYMBOL(gcn64_sendBytes, SUFFIX)
+EXPORT_SYMBOL(gcn64_receiveBytes, SUFFIX)
 
 #define xl  r26
 #define xh  r27
@@ -24,7 +36,7 @@
 	#define GCN64_DATA_DDR  _SFR_IO_ADDR(DDRD)
 	#define GCN64_DATA_PIN  _SFR_IO_ADDR(PIND)
 #endif
-#define GCN64_DATA_BIT	0
+;#define GCN64_DATA_BIT	0
 
 #if F_CPU != 16000000L
 #error Only 16MHz clock supported
@@ -50,7 +62,7 @@
 	; r24,r25 : dstbuf
 	; r22 : max bytes (for fututre use)
 	; return: count in r24,r25 (0xff: Error, 0xfe: Overflow [max_bytes too low])
-gcn64_receiveBytes:
+FUNCTION(gcn64_receiveBytes, SUFFIX):
 	clr xl
 	clr xh
 	mov zl, r24
@@ -149,7 +161,7 @@ rxdone:
 	* A stop bit is added at thy end of the packet.
 	*
 	************************************************/
-gcn64_sendBytes:
+FUNCTION(gcn64_sendBytes, SUFFIX):
 	; Move r23,r24 pointer to z
 	mov zl, r24
 	mov zh, r25
