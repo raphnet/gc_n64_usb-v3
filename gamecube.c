@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
-	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -109,33 +109,10 @@ void gc_decodeAnswer(unsigned char data[8])
 	}
 }
 
-
 static char gamecubeUpdate()
 {
 	unsigned char tmpdata[GC_GETSTATUS_REPLY_LENGTH];
 	unsigned char count;
-
-#if 0
-	/* The GetID command. This is required for the Nintendo Wavebird to work... */
-	tmp = GC_GETID;
-	count = gcn64_transaction(&tmp, 1);
-	if (count != GC_GETID_REPLY_LENGTH) {
-		return 1;
-	}
-
-	/*
-	 * The wavebird needs time. It does not answer the
-	 * folowwing get status command if we don't wait here.
-	 *
-	 * A good 2:1 safety margin has been chosen.
-	 *
-	 */
-	// 10 : does not work
-	// 20 : does not work
-	// 25 : works
-	// 30 : works
-	_delay_us(50);
-#endif
 
 	tmpdata[0] = GC_GETSTATUS1;
 	tmpdata[1] = GC_GETSTATUS2;
