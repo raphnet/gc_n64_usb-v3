@@ -555,7 +555,7 @@ int main(void)
 							pads[channel]->getReport(channel, &pad_data);
 							usbpad_update(&usbpads[channel], &pad_data);
 							state = STATE_WAIT_INTERRUPT_READY;
-							break;
+							continue;
 						}
 					} else {
 						/* Just make sure the gamepad state holds valid data
