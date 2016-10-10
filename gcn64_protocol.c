@@ -78,6 +78,18 @@ unsigned char gcn64_transaction(unsigned char chn, const unsigned char *tx, int 
 	int count;
 	unsigned char sreg = SREG;
 
+	void (*sendBytes)(const unsigned char *data, unsigned char n_bytes);
+	unsigned char (*receiveBytes)(unsigned char *dstbuf, unsigned char max_bytes);
+
+	switch(chn)
+	{
+		case 0: sendBytes = gcn64_sendBytes0; receiveBytes = gcn64_receiveBytes0; break;
+		case 1: sendBytes = gcn64_sendBytes1; receiveBytes = gcn64_receiveBytes1; break;
+		case 2: sendBytes = gcn64_sendBytes2; receiveBytes = gcn64_receiveBytes2; break;
+		case 3: sendBytes = gcn64_sendBytes3; receiveBytes = gcn64_receiveBytes3; break;
+		default: return 0;
+	}
+
 #ifdef TRACE_GCN64
 	int i;
 
@@ -91,8 +103,8 @@ unsigned char gcn64_transaction(unsigned char chn, const unsigned char *tx, int 
 #ifdef DISABLE_INTS_DURING_COMM
 	cli();
 #endif
-	gcn64_sendBytes0(tx, tx_len);
-	count = gcn64_receiveBytes0(rx, rx_max);
+	sendBytes(tx, tx_len);
+	count = receiveBytes(rx, rx_max);
 	SREG = sreg;
 
 	if (count == 0xff) {
