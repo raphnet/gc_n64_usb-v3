@@ -71,14 +71,15 @@ typedef struct _gamepad_data {
 	};
 } gamepad_data;
 
+#define GAMEPAD_MAX_CHANNELS	2
 typedef struct {
-	void (*init)(void);
-	char (*update)(void);
-	char (*changed)(void);
-	void (*hotplug)(void);
-	void (*getReport)(gamepad_data *dst);
-	void (*setVibration)(char enable);
-	char (*probe)(void); /* return true if found */
+	void (*init)(unsigned char chn);
+	char (*update)(unsigned char chn);
+	char (*changed)(unsigned char chn);
+	void (*hotplug)(unsigned char chn);
+	void (*getReport)(unsigned char chn, gamepad_data *dst);
+	void (*setVibration)(unsigned char chn, char enable);
+	char (*probe)(unsigned char chn); /* return true if found */
 } Gamepad;
 
 /* What was most recently read from the controller */

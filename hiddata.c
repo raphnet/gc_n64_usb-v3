@@ -41,7 +41,7 @@ static unsigned char cmdbuf[CMDBUF_SIZE];
 static volatile unsigned char cmdbuf_len = 0;
 
 /*** Get/Set report called from interrupt context! */
-uint16_t hiddata_get_report(struct usb_request *rq, const uint8_t **dat)
+uint16_t hiddata_get_report(void *ctx, struct usb_request *rq, const uint8_t **dat)
 {
 //	printf("Get data\n");
 	if (state == STATE_COMMAND_DONE) {
@@ -56,7 +56,7 @@ uint16_t hiddata_get_report(struct usb_request *rq, const uint8_t **dat)
 }
 
 /*** Get/Set report called from interrupt context! */
-uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uint16_t len)
+uint8_t hiddata_set_report(void *ctx, const struct usb_request *rq, const uint8_t *dat, uint16_t len)
 {
 #ifdef DEBUG
 	int i;
@@ -74,7 +74,7 @@ uint8_t hiddata_set_report(const struct usb_request *rq, const uint8_t *dat, uin
 	return 0;
 }
 
-static void hiddata_processCommandBuffer(void)
+static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 {
 	unsigned char channel;
 #ifdef DEBUG
@@ -114,7 +114,9 @@ static void hiddata_processCommandBuffer(void)
 			break;
 		case RQ_GCN64_SUSPEND_POLLING:
 			// CMD: RQ, PARAM
-			g_polling_suspended = cmdbuf[1];
+			if (ops && ops->suspendPolling) {
+				ops->suspendPolling(cmdbuf[1]);
+			}
 			break;
 		case RQ_GCN64_GET_VERSION:
 			// CMD: RQ
@@ -135,7 +137,9 @@ static void hiddata_processCommandBuffer(void)
 		case RQ_GCN64_SET_VIBRATION:
 			// CMD : RQ, CHN, Vibrate
 			// Answer: RQ, CHN, Vibrate
-			usbpad_forceVibrate(cmdbuf[2]);
+			if (ops && ops->forceVibration) {
+				ops->forceVibration(cmdbuf[1], cmdbuf[2]);
+			}
 			cmdbuf_len = 3;
 			break;
 	}
@@ -151,7 +155,7 @@ static void hiddata_processCommandBuffer(void)
 	state = STATE_COMMAND_DONE;
 }
 
-void hiddata_doTask(void)
+void hiddata_doTask(struct hiddata_ops *ops)
 {
 	switch (state)
 	{
@@ -161,7 +165,7 @@ void hiddata_doTask(void)
 			break;
 
 		case STATE_NEW_COMMAND:
-			hiddata_processCommandBuffer();
+			hiddata_processCommandBuffer(ops);
 			break;
 
 		case STATE_COMMAND_DONE:

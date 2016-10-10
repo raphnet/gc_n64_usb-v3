@@ -38,6 +38,8 @@
 #include "intervaltimer.h"
 #include "requests.h"
 
+#define NUM_PLAYERS		2
+
 #define GCN64_USB_PID	0x001D
 #define N64_USB_PID		0x0020
 #define GC_USB_PID		0x0021
@@ -58,6 +60,22 @@ struct cfg0 {
 	struct usb_interface_descriptor interface_admin;
 	struct usb_hid_descriptor hid_data;
 	struct usb_endpoint_descriptor ep2_in;
+
+#if NUM_PLAYERS >= 2
+	struct usb_interface_descriptor interface_p2;
+	struct usb_hid_descriptor hid_p2;
+	struct usb_endpoint_descriptor ep3_in;
+#endif
+#if NUM_PLAYERS >= 3
+	struct usb_interface_descriptor interface_p3;
+	struct usb_hid_descriptor hid_p3;
+	struct usb_endpoint_descriptor ep4_in;
+#endif
+#if NUM_PLAYERS >= 4
+	struct usb_interface_descriptor interface_p4;
+	struct usb_hid_descriptor hid_p4;
+	struct usb_endpoint_descriptor ep5_in;
+#endif
 };
 
 static const struct cfg0 cfg0 PROGMEM = {
@@ -65,13 +83,13 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.bLength = sizeof(struct usb_configuration_descriptor),
 		.bDescriptorType = CONFIGURATION_DESCRIPTOR,
 		.wTotalLength = sizeof(cfg0), // includes all descriptors returned together
-		.bNumInterfaces = 2,
+		.bNumInterfaces = NUM_PLAYERS + 1, // one interface per player + one management interface
 		.bConfigurationValue = 1,
 		.bmAttributes = CFG_DESC_ATTR_RESERVED, // set Self-powred and remote-wakeup here if needed.
 		.bMaxPower = 25, // for 50mA
 	},
 
-	// Main interface, HID
+	// Main interface, HID (player 1)
 	.interface = {
 		.bLength = sizeof(struct usb_interface_descriptor),
 		.bDescriptorType = INTERFACE_DESCRIPTOR,
@@ -96,7 +114,7 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.bDescriptorType = ENDPOINT_DESCRIPTOR,
 		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 1, // 0x81
 		.bmAttributes = TRANSFER_TYPE_INT,
-		.wMaxPacketsize = 32,
+		.wMaxPacketsize = 16,
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
 
@@ -129,6 +147,37 @@ static const struct cfg0 cfg0 PROGMEM = {
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
 
+#if NUM_PLAYERS >= 2
+	// Main interface, HID (player 2)
+	.interface_p2 = {
+		.bLength = sizeof(struct usb_interface_descriptor),
+		.bDescriptorType = INTERFACE_DESCRIPTOR,
+		.bInterfaceNumber = 2,
+		.bAlternateSetting = 0,
+		.bNumEndpoints = 1,
+		.bInterfaceClass = USB_DEVICE_CLASS_HID,
+		.bInterfaceSubClass = HID_SUBCLASS_NONE,
+		.bInterfaceProtocol = HID_PROTOCOL_NONE,
+	},
+	.hid_p2 = {
+		.bLength = sizeof(struct usb_hid_descriptor),
+		.bDescriptorType = HID_DESCRIPTOR,
+		.bcdHid = 0x0101,
+		.bCountryCode = HID_COUNTRY_NOT_SUPPORTED,
+		.bNumDescriptors = 1, // Only a report descriptor
+		.bClassDescriptorType = REPORT_DESCRIPTOR,
+		.wClassDescriptorLength = sizeof(gcn64_usbHidReportDescriptor),
+	},
+	.ep3_in = {
+		.bLength = sizeof(struct usb_endpoint_descriptor),
+		.bDescriptorType = ENDPOINT_DESCRIPTOR,
+		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 3, // 0x83
+		.bmAttributes = TRANSFER_TYPE_INT,
+		.wMaxPacketsize = 16,
+		.bInterval = LS_FS_INTERVAL_MS(1),
+	},
+#endif
+
 };
 
 struct usb_device_descriptor device_descriptor = {
@@ -150,6 +199,16 @@ struct usb_device_descriptor device_descriptor = {
 
 /** **/
 
+static uint16_t _usbpad_hid_get_report(void *ctx, struct usb_request *rq, const uint8_t **dat)
+{
+	return usbpad_hid_get_report((struct usbpad*)ctx, rq, dat);
+}
+
+static uint8_t _usbpad_hid_set_report(void *ctx, const struct usb_request *rq, const uint8_t *dat, uint16_t len)
+{
+	return usbpad_hid_set_report((struct usbpad*)ctx, rq, dat, len);
+}
+
 static struct usb_parameters usb_params = {
 	.flags = USB_PARAM_FLAG_CONFDESC_PROGMEM |
 					USB_PARAM_FLAG_REPORTDESC_PROGMEM,
@@ -159,13 +218,13 @@ static struct usb_parameters usb_params = {
 	.num_strings = NUM_USB_STRINGS,
 	.strings = g_usb_strings,
 
-	.n_hid_interfaces = 2,
+	.n_hid_interfaces = 1 + NUM_PLAYERS,
 	.hid_params = {
 		[0] = {
 			.reportdesc = gcn64_usbHidReportDescriptor,
 			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
-			.getReport = usbpad_hid_get_report,
-			.setReport = usbpad_hid_set_report,
+			.getReport = _usbpad_hid_get_report,
+			.setReport = _usbpad_hid_set_report,
 		},
 		[1] = {
 			.reportdesc = dataHidReport,
@@ -173,6 +232,14 @@ static struct usb_parameters usb_params = {
 			.getReport = hiddata_get_report,
 			.setReport = hiddata_set_report,
 		},
+#if NUM_PLAYERS >= 2
+		[2] = {
+			.reportdesc = gcn64_usbHidReportDescriptor,
+			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
+			.getReport = _usbpad_hid_get_report,
+			.setReport = _usbpad_hid_set_report,
+		},
+#endif
 	},
 };
 
@@ -229,13 +296,11 @@ void hwinit(void)
 }
 
 
-#define NUM_PAD_TYPES	2
-
 unsigned char current_pad_type = CONTROLLER_IS_ABSENT;
 
-Gamepad *detectPad(void)
+Gamepad *detectPad(unsigned char chn)
 {
-	current_pad_type = gcn64_detectController(GCN64_CHANNEL_0);
+	current_pad_type = gcn64_detectController(chn);
 
 	switch (current_pad_type)
 	{
@@ -269,7 +334,6 @@ void eeprom_app_ready(void)
 	g_usb_strings[USB_STRING_SERIAL_IDX] = serial_from_eeprom;
 }
 
-char g_polling_suspended = 0;
 
 void pollDelay(void)
 {
@@ -279,25 +343,51 @@ void pollDelay(void)
 	}
 }
 
+static struct usbpad usbpads[NUM_PLAYERS];
+static char g_polling_suspended = 0;
+
+static void setSuspendPolling(uint8_t suspend)
+{
+	g_polling_suspended = suspend;
+}
+
+static void forceVibration(uint8_t channel, uint8_t force)
+{
+	if (channel < NUM_PLAYERS) {
+		usbpad_forceVibrate(&usbpads[channel], force);
+	}
+}
+
+static struct hiddata_ops hiddata_ops = {
+	.suspendPolling = setSuspendPolling,
+	.forceVibration = forceVibration,
+};
+
 #define STATE_WAIT_POLLTIME			0
 #define STATE_POLL_PAD				1
 #define STATE_WAIT_INTERRUPT_READY	2
 #define STATE_TRANSMIT				3
+#define STATE_WAIT_INTERRUPT_READY_P2	4
+#define STATE_TRANSMIT_P2				5
 
 int main(void)
 {
-	Gamepad *pad = NULL;
+	Gamepad *pads[NUM_PLAYERS] = { };
 	gamepad_data pad_data;
 	unsigned char gamepad_vibrate = 0;
 	unsigned char state = STATE_WAIT_POLLTIME;
-	int error_count=0;
+	int error_count[NUM_PLAYERS] = { };
+	int i;
+	int channel;
 
 	hwinit();
 	usart1_init();
 	eeprom_init();
 	intervaltimer_init();
 
-	usbpad_init();
+	for (i=0; i<NUM_PLAYERS; i++) {
+		usbpad_init(&usbpads[i]);
+	}
 
 	switch (g_eeprom_data.cfg.mode)
 	{
@@ -321,10 +411,10 @@ int main(void)
 
 	while (1)
 	{
-		static char last_v = 0;
+		static char last_v[NUM_PLAYERS] = { };
 
 		usb_doTasks();
-		hiddata_doTask();
+		hiddata_doTask(&hiddata_ops);
 
 		switch(state)
 		{
@@ -338,62 +428,89 @@ int main(void)
 				break;
 
 			case STATE_POLL_PAD:
-				/* Try to auto-detect controller if none*/
-				if (!pad) {
-					pad = detectPad();
-					if (pad && (pad->hotplug)) {
-						// For gamecube, this make sure the next
-						// analog values we read become the center
-						// reference.
-						pad->hotplug();
+				for (channel=0; channel<NUM_PLAYERS; channel++)
+				{
+					/* Try to auto-detect controller if none*/
+					if (!pads[channel]) {
+						pads[channel] = detectPad(channel);
+						if (pads[channel] && (pads[channel]->hotplug)) {
+							// For gamecube, this make sure the next
+							// analog values we read become the center
+							// reference.
+							pads[channel]->hotplug(channel);
+						}
 					}
-				}
-				if (pad) {
-					if (pad->update()) {
-						error_count++;
-						if (error_count > MAX_READ_ERRORS) {
-							pad = NULL;
-							state = STATE_WAIT_POLLTIME;
-							error_count = 0;
+
+					/* Read from the pad by calling update */
+					if (pads[channel]) {
+						if (pads[channel]->update(channel)) {
+							error_count[channel]++;
+							if (error_count[channel] > MAX_READ_ERRORS) {
+								pads[channel] = NULL;
+								error_count[channel] = 0;
+								continue;
+							}
+						} else {
+							error_count[channel]=0;
+						}
+
+						if (pads[channel]->changed(channel))
+						{
+							pads[channel]->getReport(channel, &pad_data);
+							usbpad_update(&usbpads[channel], &pad_data);
+							state = STATE_WAIT_INTERRUPT_READY;
 							break;
 						}
 					} else {
-						error_count=0;
+						/* Just make sure the gamepad state holds valid data
+						 * to appear inactive (no buttons and axes in neutral) */
+						usbpad_update(&usbpads[channel], NULL);
 					}
-
-					if (pad->changed()) {
-
-						pad->getReport(&pad_data);
-						usbpad_update(&pad_data);
-						state = STATE_WAIT_INTERRUPT_READY;
-						break;
-					}
-				} else {
-					/* Just make sure the gamepad state holds valid data
-					 * to appear inactive (no buttons and axes in neutral) */
-					usbpad_update(NULL);
 				}
-				state = STATE_WAIT_POLLTIME;
+				/* If there were change on any of the gamepads, state will
+				 * be set to STATE_WAIT_INTERRUPT_READY. Otherwise, go back
+				 * to WAIT_POLLTIME. */
+				if (state == STATE_POLL_PAD) {
+					state = STATE_WAIT_POLLTIME;
+				}
 				break;
 
 			case STATE_WAIT_INTERRUPT_READY:
-				if (usb_interruptReady()) {
+				if (usb_interruptReady_ep1()) {
 					state = STATE_TRANSMIT;
 				}
 				break;
 
 			case STATE_TRANSMIT:
-				usb_interruptSend(usbpad_getReportBuffer(), usbpad_getReportSize());
+				usb_interruptSend_ep1(usbpad_getReportBuffer(&usbpads[0]), usbpad_getReportSize());
+				if (NUM_PLAYERS > 1) {
+					state = STATE_WAIT_INTERRUPT_READY_P2;
+				} else {
+					state = STATE_WAIT_POLLTIME;
+				}
+				break;
+
+			case STATE_WAIT_INTERRUPT_READY_P2:
+				if (usb_interruptReady_ep3()) {
+					state = STATE_TRANSMIT_P2;
+				}
+				break;
+
+			case STATE_TRANSMIT_P2:
+				usb_interruptSend_ep3(usbpad_getReportBuffer(&usbpads[1]), usbpad_getReportSize());
 				state = STATE_WAIT_POLLTIME;
 				break;
+
 		}
 
-		gamepad_vibrate = usbpad_mustVibrate();
-		if (last_v != gamepad_vibrate) {
-			if (pad && pad->setVibration) {
-				pad->setVibration(gamepad_vibrate);
+		for (channel=0; channel < NUM_PLAYERS; channel++) {
+			gamepad_vibrate = usbpad_mustVibrate(&usbpads[channel]);
+			if (last_v[channel] != gamepad_vibrate) {
+				if (pads[channel] && pads[channel]->setVibration) {
+					pads[channel]->setVibration(channel, gamepad_vibrate);
+				}
+				last_v[channel] = gamepad_vibrate;
 			}
-			last_v = gamepad_vibrate;
 		}
 	}
 

@@ -16,6 +16,7 @@
 */
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "usb.h"
 #include "gamepads.h"
 #include "usbpad.h"
@@ -24,7 +25,6 @@
 #include "config.h"
 
 #define REPORT_ID	1
-#define REPORT_SIZE	15
 
 // Output Report IDs for various functions
 #define REPORT_SET_EFFECT			0x01
@@ -48,28 +48,17 @@
 #define PID_SIMULTANEOUS_MAX	3
 #define PID_BLOCK_LOAD_REPORT	2
 
-static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE]);
+static void buildIdleReport(unsigned char dstbuf[USBPAD_REPORT_SIZE]);
 
-static volatile unsigned char gamepad_vibrate = 0; // output
-static unsigned char vibration_on = 0, force_vibrate = 0;
-static unsigned char constant_force = 0;
-static unsigned char periodic_magnitude = 0;
-
-static unsigned char _FFB_effect_index;
-#define LOOP_MAX    0xFFFF
-static unsigned int _loop_count;
-
-static unsigned char gamepad_report0[REPORT_SIZE];
-static unsigned char hid_report_data[8]; // Used for force feedback
-
-void usbpad_init()
+void usbpad_init(struct usbpad *pad)
 {
-	buildIdleReport(gamepad_report0);
+	memset(pad, 0, sizeof(struct usbpad));
+	buildIdleReport(pad->gamepad_report0);
 }
 
 int usbpad_getReportSize(void)
 {
-	return REPORT_SIZE;
+	return USBPAD_REPORT_SIZE;
 }
 
 static int16_t minmax(int16_t input, int16_t min, int16_t max)
@@ -88,7 +77,7 @@ static void btnsToReport(unsigned short buttons, unsigned char dstbuf[2])
 	dstbuf[1] = buttons >> 8;
 }
 
-static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE])
+static void buildIdleReport(unsigned char dstbuf[USBPAD_REPORT_SIZE])
 {
 	int i;
 
@@ -105,7 +94,7 @@ static void buildIdleReport(unsigned char dstbuf[REPORT_SIZE])
 	dstbuf[14] = 0;
 }
 
-static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[REPORT_SIZE])
+static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[USBPAD_REPORT_SIZE])
 {
 	int16_t xval,yval,cxval,cyval,ltrig,rtrig;
 	uint16_t buttons;
@@ -174,7 +163,7 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[R
 	btnsToReport(buttons, dstbuf+13);
 }
 
-static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbuf[REPORT_SIZE])
+static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbuf[USBPAD_REPORT_SIZE])
 {
 	int16_t xval, yval;
 	uint16_t buttons;
@@ -201,22 +190,22 @@ static void buildReportFromN64(const n64_pad_data *n64_data, unsigned char dstbu
 	btnsToReport(buttons, dstbuf+13);
 }
 
-void usbpad_update(const gamepad_data *pad_data)
+void usbpad_update(struct usbpad *pad, const gamepad_data *pad_data)
 {
 	/* Always start with an idle report. Specific report builders can just
 	 * simply ignore unused parts */
-	buildIdleReport(gamepad_report0);
+	buildIdleReport(pad->gamepad_report0);
 
 	if (pad_data)
 	{
 		switch (pad_data->pad_type)
 		{
 			case PAD_TYPE_N64:
-				buildReportFromN64(&pad_data->n64, gamepad_report0);
+				buildReportFromN64(&pad_data->n64, pad->gamepad_report0);
 				break;
 
 			case PAD_TYPE_GAMECUBE:
-				buildReportFromGC(&pad_data->gc, gamepad_report0);
+				buildReportFromGC(&pad_data->gc, pad->gamepad_report0);
 				break;
 
 			default:
@@ -225,38 +214,38 @@ void usbpad_update(const gamepad_data *pad_data)
 	}
 }
 
-void usbpad_forceVibrate(char force)
+void usbpad_forceVibrate(struct usbpad *pad, char force)
 {
-	force_vibrate = force;
+	pad->force_vibrate = force;
 }
 
-char usbpad_mustVibrate(void)
+char usbpad_mustVibrate(struct usbpad *pad)
 {
-	if (force_vibrate) {
+	if (pad->force_vibrate) {
 		return 1;
 	}
 
-	if (!vibration_on) {
-		gamepad_vibrate = 0;
+	if (!pad->vibration_on) {
+		pad->gamepad_vibrate = 0;
 	} else {
-		if (constant_force > 0x7f) {
-			gamepad_vibrate = 1;
-		} else if (periodic_magnitude > 0x7f) {
-			gamepad_vibrate = 1;
+		if (pad->constant_force > 0x7f) {
+			pad->gamepad_vibrate = 1;
+		} else if (pad->periodic_magnitude > 0x7f) {
+			pad->gamepad_vibrate = 1;
 		} else {
-			gamepad_vibrate = 0;
+			pad->gamepad_vibrate = 0;
 		}
 	}
 
-	return gamepad_vibrate;
+	return pad->gamepad_vibrate;
 }
 
-unsigned char *usbpad_getReportBuffer(void)
+unsigned char *usbpad_getReportBuffer(struct usbpad *pad)
 {
-	return gamepad_report0;
+	return pad->gamepad_report0;
 }
 
-uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat)
+uint16_t usbpad_hid_get_report(struct usbpad *pad, struct usb_request *rq, const uint8_t **dat)
 {
 	uint8_t report_id = (rq->wValue & 0xff);
 
@@ -271,15 +260,16 @@ uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat)
 				if (report_id == 1) { // Joystick
 					// report_id = rq->wValue & 0xff
 					// interface = rq->wIndex
-					*dat = gamepad_report0;
+					*dat = pad->gamepad_report0;
 					printf_P(PSTR("Get joy report\r\n"));
-					return REPORT_SIZE;
+					return USBPAD_REPORT_SIZE
+				;
 				} else if (report_id == 2) { // 2 : ES playing
-					hid_report_data[0] = report_id;
-					hid_report_data[1] = 0;
-					hid_report_data[2] = _FFB_effect_index;
+					pad->hid_report_data[0] = report_id;
+					pad->hid_report_data[1] = 0;
+					pad->hid_report_data[2] = pad->_FFB_effect_index;
 					printf_P(PSTR("ES playing\r\n"));
-					*dat = hid_report_data;
+					*dat = pad->hid_report_data;
 					return 3;
 				} else {
 					printf_P(PSTR("Get input report %d ??\r\n"), rq->wValue & 0xff);
@@ -289,32 +279,32 @@ uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat)
 
 		case HID_REPORT_TYPE_FEATURE:
 			if (report_id == PID_BLOCK_LOAD_REPORT) {
-				hid_report_data[0] = report_id;
-				hid_report_data[1] = 0x1; // Effect block index
-				hid_report_data[2] = 0x1; // (1: success, 2: oom, 3: load error)
-				hid_report_data[3] = 10;
-				hid_report_data[4] = 10;
+				pad->hid_report_data[0] = report_id;
+				pad->hid_report_data[1] = 0x1; // Effect block index
+				pad->hid_report_data[2] = 0x1; // (1: success, 2: oom, 3: load error)
+				pad->hid_report_data[3] = 10;
+				pad->hid_report_data[4] = 10;
 				printf_P(PSTR("block load\r\n"));
-				*dat = hid_report_data;
+				*dat = pad->hid_report_data;
 				return 5;
 			}
 			else if (report_id == PID_SIMULTANEOUS_MAX) {
-				hid_report_data[0] = report_id;
+				pad->hid_report_data[0] = report_id;
 				// ROM Effect Block count
-				hid_report_data[1] = 0x1;
-				hid_report_data[2] = 0x1;
+				pad->hid_report_data[1] = 0x1;
+				pad->hid_report_data[2] = 0x1;
 				// PID pool move report?
-				hid_report_data[3] = 0xff;
-				hid_report_data[4] = 1;
+				pad->hid_report_data[3] = 0xff;
+				pad->hid_report_data[4] = 1;
 				printf_P(PSTR("simultaneous max\r\n"));
-				*dat = hid_report_data;
+				*dat = pad->hid_report_data;
 				return 5;
 			}
 			else if (report_id == REPORT_CREATE_EFFECT) {
-				hid_report_data[0] = report_id;
-				hid_report_data[1] = 1;
+				pad->hid_report_data[0] = report_id;
+				pad->hid_report_data[1] = 1;
 				printf_P(PSTR("create effect\r\n"));
-				*dat = hid_report_data;
+				*dat = pad->hid_report_data;
 				return 2;
 			} else {
 				printf_P(PSTR("Unknown feature %d\r\n"), rq->wValue & 0xff);
@@ -326,7 +316,7 @@ uint16_t usbpad_hid_get_report(struct usb_request *rq, const uint8_t **dat)
 	return 0;
 }
 
-uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data, uint16_t len)
+uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, const uint8_t *data, uint16_t len)
 {
 	if (len < 1) {
 		printf_P(PSTR("shrt\n"));
@@ -345,24 +335,24 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 				break;
 			case REPORT_DISABLE_ACTUATORS:
 				printf_P(PSTR("disable actuators\r\n"));
-				periodic_magnitude = 0;
-				constant_force = 0;
-				vibration_on = 0;
+				pad->periodic_magnitude = 0;
+				pad->constant_force = 0;
+				pad->vibration_on = 0;
 				break;
 			case REPORT_PID_POOL:
 				printf_P(PSTR("pid pool\r\n"));
 				break;
 			case REPORT_SET_EFFECT:
-				_FFB_effect_index = data[1];
+				pad->_FFB_effect_index = data[1];
 				printf_P(PSTR("set effect %d\r\n"), data[1]);
 				break;
 			case REPORT_SET_PERIODIC:
-				periodic_magnitude = data[2];
+				pad->periodic_magnitude = data[2];
 				printf_P(PSTR("periodic mag: %d"), data[2]);
 				break;
 			case REPORT_SET_CONSTANT_FORCE:
 				if (data[1] == 1) {
-					constant_force = data[2];
+					pad->constant_force = data[2];
 					printf_P(PSTR("Constant force %d\r\n"), data[2]);
 				}
 				break;
@@ -373,7 +363,7 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 				 * Byte 1 : bit 7=rom flag, bits 6-0=effect block index
 				 * Byte 2 : Effect operation
 				 * Byte 3 : Loop count */
-				_loop_count = data[3]<<3;
+				pad->_loop_count = data[3]<<3;
 
 				printf_P(PSTR("EFFECT OP: rom=%s, idx=0x%02x"), data[1] & 0x80 ? "Yes":"No", data[1] & 0x7F);
 
@@ -386,17 +376,17 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 						{
 							case EFFECT_OP_START:
 								printf_P(PSTR("Start\r\n"));
-								vibration_on = 1;
+								pad->vibration_on = 1;
 								break;
 
 							case EFFECT_OP_START_SOLO:
 								printf_P(PSTR("Start solo\r\n"));
-								vibration_on = 1;
+								pad->vibration_on = 1;
 								break;
 
 							case EFFECT_OP_STOP:
 								printf_P(PSTR("Stop\r\n"));
-								vibration_on = 0;
+								pad->vibration_on = 0;
 								break;
 						}
 						break;
@@ -424,7 +414,7 @@ uint8_t usbpad_hid_set_report(const struct usb_request *rq, const uint8_t *data,
 		switch(data[0])
 		{
 			case REPORT_CREATE_EFFECT:
-				_FFB_effect_index = data[1];
+				pad->_FFB_effect_index = data[1];
 				printf_P(PSTR("create effect %d\n"), data[1]);
 				break;
 

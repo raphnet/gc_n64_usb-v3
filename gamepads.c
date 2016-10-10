@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
-	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,7 +16,8 @@
 */
 #include "gamepads.h"
 
-/* Shared between N64 and GC (only one is used at a time). Saves memory. */
 
+/* Shared between N64 and GC (only one is used at a time). Saves memory. */
 gamepad_data last_sent_report;
 gamepad_data last_built_report;
+

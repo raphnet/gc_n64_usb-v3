@@ -23,20 +23,23 @@
 #include "gcn64_protocol.h"
 
 /*********** prototypes *************/
-static void gamecubeInit(void);
-static char gamecubeUpdate(void);
-static char gamecubeChanged(void);
+static void gamecubeInit(unsigned char chn);
+static char gamecubeUpdate(unsigned char chn);
+static char gamecubeChanged(unsigned char chn);
 
-static char gc_rumbling = 0;
-static char origins_set = 0;
-static unsigned char orig_x, orig_y, orig_cx, orig_cy;
+static char gc_rumbling[GAMEPAD_MAX_CHANNELS] = { };
+static char origins_set[GAMEPAD_MAX_CHANNELS] = { };
+static unsigned char orig_x[GAMEPAD_MAX_CHANNELS];
+static unsigned char orig_y[GAMEPAD_MAX_CHANNELS];
+static unsigned char orig_cx[GAMEPAD_MAX_CHANNELS];
+static unsigned char orig_cy[GAMEPAD_MAX_CHANNELS];
 
-static void gamecubeInit(void)
+static void gamecubeInit(unsigned char chn)
 {
-	gamecubeUpdate();
+	gamecubeUpdate(chn);
 }
 
-void gc_decodeAnswer(unsigned char data[8])
+void gc_decodeAnswer(unsigned char chn, unsigned char data[8])
 {
 	unsigned char x,y,cx,cy;
 
@@ -91,74 +94,74 @@ void gc_decodeAnswer(unsigned char data[8])
 	last_built_report.gc.rt = data[7];
 	memcpy(last_built_report.gc.raw_data, data, 8);
 
-	if (origins_set) {
-		last_built_report.gc.x = ((int)x-(int)orig_x);
-		last_built_report.gc.y = ((int)y-(int)orig_y);
-		last_built_report.gc.cx = ((int)cx-(int)orig_cx);
-		last_built_report.gc.cy = ((int)cy-(int)orig_cy);
+	if (origins_set[chn]) {
+		last_built_report.gc.x = ((int)x-(int)orig_x[chn]);
+		last_built_report.gc.y = ((int)y-(int)orig_y[chn]);
+		last_built_report.gc.cx = ((int)cx-(int)orig_cx[chn]);
+		last_built_report.gc.cy = ((int)cy-(int)orig_cy[chn]);
 	} else {
-		orig_x = x;
-		orig_y = y;
-		orig_cx = cx;
-		orig_cy = cy;
+		orig_x[chn] = x;
+		orig_y[chn] = y;
+		orig_cx[chn] = cx;
+		orig_cy[chn] = cy;
 		last_built_report.gc.x = 0;
 		last_built_report.gc.y = 0;
 		last_built_report.gc.cx = 0;
 		last_built_report.gc.cy = 0;
-		origins_set = 1;
+		origins_set[chn] = 1;
 	}
 }
 
-static char gamecubeUpdate()
+static char gamecubeUpdate(unsigned char chn)
 {
 	unsigned char tmpdata[GC_GETSTATUS_REPLY_LENGTH];
 	unsigned char count;
 
 	tmpdata[0] = GC_GETSTATUS1;
 	tmpdata[1] = GC_GETSTATUS2;
-	tmpdata[2] = GC_GETSTATUS3(gc_rumbling);
+	tmpdata[2] = GC_GETSTATUS3(gc_rumbling[chn]);
 
 	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 3, tmpdata, GC_GETSTATUS_REPLY_LENGTH);
 	if (count != GC_GETSTATUS_REPLY_LENGTH) {
 		return 1;
 	}
 
-	gc_decodeAnswer(tmpdata);
+	gc_decodeAnswer(chn, tmpdata);
 
 	return 0;
 }
 
-static void gamecubeHotplug(void)
+static void gamecubeHotplug(unsigned char chn)
 {
 	// Make sure next read becomes the refence center values
-	origins_set = 0;
+	origins_set[chn] = 0;
 }
 
-static char gamecubeProbe(void)
+static char gamecubeProbe(unsigned char chn)
 {
-	origins_set = 0;
+	origins_set[chn] = 0;
 
-	if (gamecubeUpdate()) {
+	if (gamecubeUpdate(chn)) {
 		return 0;
 	}
 
 	return 1;
 }
 
-static char gamecubeChanged(void)
+static char gamecubeChanged(unsigned char chn)
 {
 	return memcmp(&last_built_report, &last_sent_report, sizeof(gamepad_data));
 }
 
-static void gamecubeGetReport(gamepad_data *dst)
+static void gamecubeGetReport(unsigned char chn, gamepad_data *dst)
 {
 	if (dst)
 		memcpy(dst, &last_built_report, sizeof(gamepad_data));
 }
 
-static void gamecubeVibration(char enable)
+static void gamecubeVibration(unsigned char chn, char enable)
 {
-	gc_rumbling = enable;
+	gc_rumbling[chn] = enable;
 }
 
 Gamepad GamecubeGamepad = {

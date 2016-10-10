@@ -25,32 +25,33 @@
 #undef BUTTON_A_RUMBLE_TEST
 
 /*********** prototypes *************/
-static void n64Init(void);
-static char n64Update(void);
-static char n64Changed(void);
-static void n64GetReport(gamepad_data *dst);
-static void n64SetVibration(char enable);
+static void n64Init(unsigned char chn);
+static char n64Update(unsigned char chn);
+static char n64Changed(unsigned char chn);
+static void n64GetReport(unsigned char chn, gamepad_data *dst);
+static void n64SetVibration(unsigned char chn, char enable);
 
-static char must_rumble = 0;
+static char must_rumble[GAMEPAD_MAX_CHANNELS] = { };
 #ifdef BUTTON_A_RUMBLE_TEST
-static char force_rumble = 0;
+static char force_rumble[GAMEPAD_MAX_CHANNELS] = { };
 #endif
+static unsigned char n64_rumble_state[GAMEPAD_MAX_CHANNELS] = { };
 
-static void n64Init(void)
-{
-	n64Update();
-}
+unsigned char tmpdata[40]; // Shared between channels
 
-#define RSTATE_INIT			0
+#define RSTATE_UNAVAILABLE	0
 #define RSTATE_OFF			1
 #define RSTATE_TURNON		2
 #define RSTATE_ON			3
 #define RSTATE_TURNOFF		4
-#define RSTATE_UNAVAILABLE	5
-static unsigned char n64_rumble_state = RSTATE_UNAVAILABLE;
-unsigned char tmpdata[40];
+#define RSTATE_INIT			5
 
-static char initRumble(void)
+static void n64Init(unsigned char chn)
+{
+	n64Update(chn);
+}
+
+static char initRumble(unsigned char chn)
 {
 	int count;
 	unsigned char data[4];
@@ -60,14 +61,14 @@ static char initRumble(void)
 	tmpdata[2] = 0x01;
 	memset(tmpdata+3, 0x80, 32);
 
-	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 35, data, sizeof(data));
+	count = gcn64_transaction(chn, tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
 	return -1;
 }
 
-static char controlRumble(char enable)
+static char controlRumble(unsigned char chn, char enable)
 {
 	int count;
 	unsigned char data[4];
@@ -76,14 +77,14 @@ static char controlRumble(char enable)
 	tmpdata[1] = 0xc0;
 	tmpdata[2] = 0x1b;
 	memset(tmpdata+3, enable ? 0x01 : 0x00, 32);
-	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 35, data, sizeof(data));
+	count = gcn64_transaction(chn, tmpdata, 35, data, sizeof(data));
 	if (count == 1)
 		return 0;
 
 	return -1;
 }
 
-static char n64Update(void)
+static char n64Update(unsigned char chn)
 {
 	unsigned char count;
 	unsigned char x,y;
@@ -101,78 +102,78 @@ static char n64Update(void)
 	 * Bit 1 tells is if there was something connected that has been removed.
 	 */
 	tmpdata[0] = N64_GET_CAPABILITIES;
-	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 1, caps, sizeof(caps));
+	count = gcn64_transaction(chn, tmpdata, 1, caps, sizeof(caps));
 	if (count != N64_CAPS_REPLY_LENGTH) {
 		// a failed read could mean the pack or controller was gone. Init
 		// will be necessary next time we detect a pack is present.
-		n64_rumble_state = RSTATE_INIT;
+		n64_rumble_state[chn] = RSTATE_INIT;
 		return -1;
 	}
 
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
-	if ((caps[2] & 0x01) && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
-		n64_rumble_state = RSTATE_INIT;
+	if ((caps[2] & 0x01) && (n64_rumble_state[chn] == RSTATE_UNAVAILABLE)) {
+		n64_rumble_state[chn] = RSTATE_INIT;
 	}
 
 	/* Detect when a pack is removed. */
 	if (!(caps[2] & 0x01) || (caps[2] & 0x02) ) {
-		n64_rumble_state = RSTATE_UNAVAILABLE;
+		n64_rumble_state[chn] = RSTATE_UNAVAILABLE;
 	}
 #ifdef BUTTON_A_RUMBLE_TEST
-	must_rumble = force_rumble;
+	must_rumble[chn] = force_rumble[chn];
 	//printf("Caps: %02x %02x %02x\r\n", caps[0], caps[1], caps[2]);
 #endif
 
 
-	switch (n64_rumble_state)
+	switch (n64_rumble_state[chn])
 	{
 		case RSTATE_INIT:
 			/* Retry until the controller answers with a full byte. */
-			if (initRumble() != 0) {
-				if (initRumble() != 0) {
-					n64_rumble_state = RSTATE_UNAVAILABLE;
+			if (initRumble(chn) != 0) {
+				if (initRumble(chn) != 0) {
+					n64_rumble_state[chn] = RSTATE_UNAVAILABLE;
 				}
 				break;
 			}
 
-			if (must_rumble) {
-				controlRumble(1);
-				n64_rumble_state = RSTATE_ON;
+			if (must_rumble[chn]) {
+				controlRumble(chn, 1);
+				n64_rumble_state[chn] = RSTATE_ON;
 			} else {
-				controlRumble(0);
-				n64_rumble_state = RSTATE_OFF;
+				controlRumble(chn, 0);
+				n64_rumble_state[chn] = RSTATE_OFF;
 			}
 			break;
 
 		case RSTATE_TURNON:
-			if (0 == controlRumble(1)) {
-				n64_rumble_state = RSTATE_ON;
+			if (0 == controlRumble(chn, 1)) {
+				n64_rumble_state[chn] = RSTATE_ON;
 			}
 			break;
 
 		case RSTATE_TURNOFF:
-			if (0 == controlRumble(0)) {
-				n64_rumble_state = RSTATE_OFF;
+			if (0 == controlRumble(chn, 0)) {
+				n64_rumble_state[chn] = RSTATE_OFF;
 			}
 			break;
 
 		case RSTATE_ON:
-			if (!must_rumble) {
-				 controlRumble(0);
-				 n64_rumble_state = RSTATE_OFF;
+			if (!must_rumble[chn]) {
+				 controlRumble(chn, 0);
+				 n64_rumble_state[chn] = RSTATE_OFF;
 			}
 			break;
 
 		case RSTATE_OFF:
-			if (must_rumble) {
-				 controlRumble(1);
-				n64_rumble_state = RSTATE_ON;
+			if (must_rumble[chn]) {
+				 controlRumble(chn, 1);
+				n64_rumble_state[chn] = RSTATE_ON;
 			}
 			break;
 	}
 
 	tmpdata[0] = N64_GET_STATUS;
-	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 1, status, sizeof(status));
+	count = gcn64_transaction(chn, tmpdata, 1, status, sizeof(status));
 	if (count != N64_GET_STATUS_REPLY_LENGTH) {
 		return -1;
 	}
@@ -206,9 +207,9 @@ static char n64Update(void)
 
 #ifdef BUTTON_A_RUMBLE_TEST
 	if (btns1 & 0x80) {
-		force_rumble = 1;
+		force_rumble[chn] = 1;
 	} else {
-		force_rumble = 0;
+		force_rumble[chn] = 0;
 	}
 #endif
 
@@ -250,7 +251,7 @@ static char n64Update(void)
 	return 0;
 }
 
-static char n64Probe(void)
+static char n64Probe(unsigned char chn)
 {
 	int count;
 	char i;
@@ -267,14 +268,14 @@ static char n64Probe(void)
 	 * Bit 1 tells is if there was something connected that has been removed.
 	 */
 
-	n64_rumble_state = RSTATE_UNAVAILABLE;
+	n64_rumble_state[chn] = RSTATE_UNAVAILABLE;
 
 	for (i=0; i<15; i++)
 	{
 		_delay_ms(30);
 
 		tmp = N64_GET_CAPABILITIES;
-		count = gcn64_transaction(GCN64_CHANNEL_0, &tmp, 1, data, sizeof(data));
+		count = gcn64_transaction(chn, &tmp, 1, data, sizeof(data));
 
 		if (count == N64_CAPS_REPLY_LENGTH) {
 			return 1;
@@ -283,12 +284,12 @@ static char n64Probe(void)
 	return 0;
 }
 
-static char n64Changed(void)
+static char n64Changed(unsigned char chn)
 {
 	return memcmp(&last_built_report, &last_sent_report, sizeof(gamepad_data));
 }
 
-static void n64GetReport(gamepad_data *dst)
+static void n64GetReport(unsigned char chn, gamepad_data *dst)
 {
 	if (dst)
 		memcpy(dst, &last_built_report, sizeof(gamepad_data));
@@ -296,9 +297,9 @@ static void n64GetReport(gamepad_data *dst)
 	memcpy(&last_sent_report, &last_built_report, sizeof(gamepad_data));
 }
 
-static void n64SetVibration(char enable)
+static void n64SetVibration(unsigned char chn, char enable)
 {
-	must_rumble = enable;
+	must_rumble[chn] = enable;
 }
 
 static Gamepad N64Gamepad = {

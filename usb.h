@@ -176,8 +176,9 @@ struct usb_hid_parameters {
 	const unsigned char *reportdesc;
 
 	// Warning: Called from interrupt handler. Implement accordingly.
-	uint16_t (*getReport)(struct usb_request *rq, const uint8_t **dat);
-	uint8_t (*setReport)(const struct usb_request *rq, const uint8_t *dat, uint16_t len);
+	void *ctx;
+	uint16_t (*getReport)(void *ctx, struct usb_request *rq, const uint8_t **dat);
+	uint8_t (*setReport)(void *ctx, const struct usb_request *rq, const uint8_t *dat, uint16_t len);
 };
 
 struct usb_parameters {

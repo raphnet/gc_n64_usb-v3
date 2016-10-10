@@ -434,7 +434,9 @@ static void handleSetupPacket(struct usb_request *rq)
 									if (g_params->hid_params[rq->wIndex].getReport) {
 										const unsigned char *data;
 										uint16_t len;
-										len = g_params->hid_params[rq->wIndex].getReport(rq, &data);
+										len = g_params->hid_params[rq->wIndex].getReport(
+														g_params->hid_params[rq->wIndex].ctx,
+														rq, &data);
 										if (len) {
 											buf2EP(0, data, len, rq->wLength, 0);
 										}
@@ -513,7 +515,9 @@ static void handleDataPacket(const struct usb_request *rq, uint8_t *dat, uint16_
 			return;
 
 		if (g_params->hid_params[rq->wIndex].setReport) {
-			if (g_params->hid_params[rq->wIndex].setReport(rq, dat, len)) {
+			if (g_params->hid_params[rq->wIndex].setReport(
+										g_params->hid_params[rq->wIndex].ctx,
+										rq, dat, len)) {
 				UECONX |= (1<<STALLRQ);
 			} else {
 				// xmit status
