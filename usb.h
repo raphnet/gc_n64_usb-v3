@@ -169,7 +169,7 @@ struct usb_hid_descriptor {
 #define USB_PARAM_FLAG_CONFDESC_PROGMEM		2
 #define USB_PARAM_FLAG_REPORTDESC_PROGMEM	4
 
-#define MAX_HID_INTERFACES	2
+#define MAX_HID_INTERFACES	5
 
 struct usb_hid_parameters {
 	uint16_t reportdesc_len;
@@ -198,8 +198,11 @@ struct usb_parameters {
 	struct usb_hid_parameters hid_params[MAX_HID_INTERFACES];
 };
 
-char usb_interruptReady(void);
-void usb_interruptSend(void *data, int len); // EP1
+char usb_interruptReady_ep1(void);
+void usb_interruptSend_ep1(void *data, int len);
+char usb_interruptReady_ep3(void);
+void usb_interruptSend_ep3(void *data, int len);
+
 void usb_init(const struct usb_parameters *params);
 void usb_doTasks(void);
 void usb_shutdown(void);

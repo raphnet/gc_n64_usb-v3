@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -37,6 +37,8 @@ static uint8_t g_device_state = STATE_DEFAULT;
 static uint8_t g_current_config;
 static void *interrupt_data;
 static volatile int interrupt_data_len = -1;
+static void *interrupt_data3;
+static volatile int interrupt_data_len3 = -1;
 
 #define CONTROL_WRITE_BUFSIZE	64
 static struct usb_request control_write_rq;
@@ -64,7 +66,7 @@ static int wcslen(const wchar_t *str)
 	return i;
 }
 
-static void setupEndpoints(void)
+static void setupEndpoints()
 {
 	/*** EP0 ***/
 
@@ -89,7 +91,7 @@ static void setupEndpoints(void)
 	UECONX = 1<<EPEN; // activate endpoint
 	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
 	UEIENX = (1<<TXINE);
-	UECFG1X |= (1<<EPSIZE1)|(1<<ALLOC); // 32 bytes, one bank, and allocate
+	UECFG1X = (1<<EPSIZE0)|(1<<ALLOC); // 16 bytes, one bank, and allocate
 	UEINTX = 0;
 
 	if (!(UESTA0X & (1<<CFGOK))) {
@@ -109,6 +111,23 @@ static void setupEndpoints(void)
 	if (!(UESTA0X & (1<<CFGOK))) {
 		printf_P(PSTR("CFG EP2 fail\r\n"));
 		return;
+	}
+
+	if (g_params->n_hid_interfaces > 2) {
+		/*** EP3 ***/
+		UENUM = 0x03;  // select endpoint
+
+		UECONX = 1<<EPEN; // activate endpoint
+		UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
+		UEIENX = (1<<TXINE);
+		UECFG1X = (1<<EPSIZE0)|(1<<ALLOC); // 16 bytes, one bank, and allocate
+		UEINTX = 0;
+
+		if (!(UESTA0X & (1<<CFGOK))) {
+			printf_P(PSTR("CFG EP3 fail\r\n"));
+			while(1);
+			return;
+		}
 	}
 }
 
@@ -153,6 +172,33 @@ static void buf2EP(uint8_t epnum, const void *src, uint16_t len, uint16_t max_le
 		for (i=0; i<len; i++) {
 			UEDATX = *s;
 			s++;
+		}
+	}
+}
+
+/**
+ */
+static void longDescriptorHelper(const uint8_t *data, uint16_t len, uint16_t rq_len, uint8_t progmem)
+{
+	uint16_t todo = rq_len;
+	uint16_t pos = 0;
+
+	while(1)
+	{
+		if (todo > 64) {
+			buf2EP(0, data+pos, 64, 64, progmem);
+			UEINTX &= ~(1<<TXINI);
+			pos += 64;
+			todo -= 64;
+			while (!(UEINTX & (1<<TXINI)));
+		}
+		else {
+			buf2EP(0, data+pos, todo,
+					todo,
+					progmem);
+//			UEINTX &= ~(1<<TXINI);
+//			while (!(UEINTX & (1<<TXINI)));
+			break;
 		}
 	}
 }
@@ -279,8 +325,8 @@ static void handleSetupPacket(struct usb_request *rq)
 										g_params->flags & USB_PARAM_FLAG_DEVDESC_PROGMEM);
 								break;
 							case CONFIGURATION_DESCRIPTOR:
-								// Check index if more than 1 config
-								buf2EP(0, (unsigned char*)g_params->configdesc, g_params->configdesc_ttllen,
+								// Would need to check index if more than 1 configs...
+								longDescriptorHelper(g_params->configdesc, g_params->configdesc_ttllen,
 											rq->wLength, g_params->flags & USB_PARAM_FLAG_CONFDESC_PROGMEM);
 								break;
 							case STRING_DESCRIPTOR:
@@ -352,51 +398,17 @@ static void handleSetupPacket(struct usb_request *rq)
 								{
 									case REPORT_DESCRIPTOR:
 										{
-											uint16_t rqlen = rq->wLength;
-											uint16_t todo = rqlen;
-											uint16_t pos = 0;
-											unsigned char *reportdesc;
-
 											// HID 1.1 : 7.1.1 Get_Descriptor request. wIndex is the interface number.
 											//
-											if (rq->wIndex > g_params->n_hid_interfaces)
+											if (rq->wIndex > g_params->n_hid_interfaces) {
+												unhandled = 1;
 												break;
-
-											reportdesc = (unsigned char*)g_params->hid_params[rq->wIndex].reportdesc;
-											if (rqlen > g_params->hid_params[rq->wIndex].reportdesc_len) {
-//												rqlen = g_params->hid_params[rq->wIndex].reportdesc_len;
-											};
-
-//											printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
-
-											while(1)
-											{
-//												printf_P(PSTR("pos %d todo %d\r\n"), pos, todo);
-												if (todo > 64) {
-													buf2EP(0, reportdesc+pos, 64,
-															64,
-															g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
-													UEINTX &= ~(1<<TXINI);
-													pos += 64;
-													todo -= 64;
-													while (!(UEINTX & (1<<TXINI)));
-												} else {
-													buf2EP(0, reportdesc+pos, todo,
-															todo,
-															g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
-													UEINTX &= ~(1<<TXINI);
-													while (!(UEINTX & (1<<TXINI)));
-													break;
-												}
-											}
-											while (1)
-											{
-												if (UEINTX & (1<<RXOUTI)) {
-													UEINTX &= ~(1<<RXOUTI); // ACK
-													return;
-												}
 											}
 
+											longDescriptorHelper(g_params->hid_params[rq->wIndex].reportdesc,
+																g_params->hid_params[rq->wIndex].reportdesc_len,
+																rq->wLength,
+																g_params->flags & USB_PARAM_FLAG_REPORTDESC_PROGMEM);
 										}
 										break;
 
@@ -576,6 +588,28 @@ ISR(USB_GEN_vect)
 	}
 }
 
+static void handle_interrupt_xmit(uint8_t ep, void **interrupt_data, volatile int *interrupt_data_len)
+{
+	uint8_t i;
+
+	UENUM = ep;
+	i = UEINTX;
+
+	if (i & (1<<TXINI)) {
+		if (*interrupt_data_len < 0) {
+			// If there's not already data waiting to be
+			// sent, disable the interrupt.
+			UEIENX &= ~(1<<TXINE);
+		} else {
+			UEINTX &= ~(1<<TXINI);
+			buf2EP(ep, (void*)*interrupt_data, *interrupt_data_len, *interrupt_data_len, 0);
+			*interrupt_data = NULL;
+			*interrupt_data_len = -1;
+			UEINTX &= ~(1<<FIFOCON);
+		}
+	}
+}
+
 // Endpoint interrupt
 ISR(USB_COM_vect)
 {
@@ -619,22 +653,11 @@ ISR(USB_COM_vect)
 	}
 
 	if (ueint & (1<<EPINT1)) {
-		UENUM = 1;
-		i = UEINTX;
+		handle_interrupt_xmit(1, &interrupt_data, &interrupt_data_len);
+	}
 
-		if (i & (1<<TXINI)) {
-			if (interrupt_data_len < 0) {
-				// If there's not already data waiting to be
-				// sent, disable the interrupt.
-				UEIENX &= ~(1<<TXINE);
-			} else {
-				UEINTX &= ~(1<<TXINI);
-				buf2EP(1, interrupt_data, interrupt_data_len, interrupt_data_len, 0);
-				interrupt_data = NULL;
-				interrupt_data_len = -1;
-				UEINTX &= ~(1<<FIFOCON);
-			}
-		}
+	if (ueint & (1<<EPINT3)) {
+		handle_interrupt_xmit(3, &interrupt_data3, &interrupt_data_len3);
 	}
 
 #if 0
@@ -645,12 +668,34 @@ ISR(USB_COM_vect)
 #endif
 }
 
-char usb_interruptReady(void)
+char usb_interruptReady_ep3(void)
+{
+	return interrupt_data_len3 == -1;
+}
+
+void usb_interruptSend_ep3(void *data, int len)
+{
+	uint8_t sreg = SREG;
+
+	while (interrupt_data_len3 != -1) { }
+
+	cli();
+
+	interrupt_data3 = data;
+	interrupt_data_len3 = len;
+
+	UENUM = 3;
+	UEIENX |= (1<<TXINE);
+
+	SREG = sreg;
+}
+
+char usb_interruptReady_ep1(void)
 {
 	return interrupt_data_len == -1;
 }
 
-void usb_interruptSend(void *data, int len)
+void usb_interruptSend_ep1(void *data, int len)
 {
 	uint8_t sreg = SREG;
 
