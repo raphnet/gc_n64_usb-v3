@@ -17,6 +17,19 @@ all: $(HEXFILE)
 main.o: main.c reportdesc.c dataHidReport.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+gcn64txrx0.o: gcn64txrx.S
+	$(CC) $(CFLAGS) -c $< -o $@ -DSUFFIX=0 -DGCN64_DATA_BIT=0
+
+gcn64txrx1.o: gcn64txrx.S
+	$(CC) $(CFLAGS) -c $< -o $@ -DSUFFIX=1 -DGCN64_DATA_BIT=2
+
+gcn64txrx2.o: gcn64txrx.S
+	$(CC) $(CFLAGS) -c $< -o $@ -DSUFFIX=2 -DGCN64_DATA_BIT=1
+
+gcn64txrx3.o: gcn64txrx.S
+	$(CC) $(CFLAGS) -c $< -o $@ -DSUFFIX=3 -DGCN64_DATA_BIT=3
+
+
 %.o: %.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
