@@ -454,21 +454,6 @@ int main(void)
 	eeprom_init();
 	intervaltimer_init();
 
-	for (i=0; i<num_players; i++) {
-		int hid_iface_id;
-
-		usbpad_init(&usbpads[i]);
-
-		// Skip interface 1 (always used for the dataReport)
-		if (i>0) {
-			hid_iface_id = i + 1;
-		} else {
-			hid_iface_id = i;
-		}
-
-		usb_params.hid_params[hid_iface_id].ctx = &usbpads[i];
-	}
-
 	switch (g_eeprom_data.cfg.mode)
 	{
 		default:
@@ -511,6 +496,21 @@ int main(void)
 			usb_params.n_hid_interfaces = 3;
 			num_players = 2;
 			break;
+	}
+
+	for (i=0; i<num_players; i++) {
+		int hid_iface_id;
+
+		usbpad_init(&usbpads[i]);
+
+		// Skip interface 1 (always used for the dataReport)
+		if (i>0) {
+			hid_iface_id = i + 1;
+		} else {
+			hid_iface_id = i;
+		}
+
+		usb_params.hid_params[hid_iface_id].ctx = &usbpads[i];
 	}
 
 	sei();
