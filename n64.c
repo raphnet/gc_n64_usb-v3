@@ -213,16 +213,16 @@ static char n64Update(unsigned char chn)
 	}
 #endif
 
-	last_built_report.pad_type = PAD_TYPE_N64;
-	last_built_report.n64.buttons = (btns1 << 8) | btns2;
-	last_built_report.n64.x = x;
-	last_built_report.n64.y = y;
+	last_built_report[chn].pad_type = PAD_TYPE_N64;
+	last_built_report[chn].n64.buttons = (btns1 << 8) | btns2;
+	last_built_report[chn].n64.x = x;
+	last_built_report[chn].n64.y = y;
 
 	/* Copy all the data as-is for the raw field */
-	last_built_report.n64.raw_data[0] = btns1;
-	last_built_report.n64.raw_data[1] = btns2;
-	last_built_report.n64.raw_data[2] = x;
-	last_built_report.n64.raw_data[3] = y;
+	last_built_report[chn].n64.raw_data[0] = btns1;
+	last_built_report[chn].n64.raw_data[1] = btns2;
+	last_built_report[chn].n64.raw_data[2] = x;
+	last_built_report[chn].n64.raw_data[3] = y;
 
 	/* Some cheap non-official controllers
 	 * use the full 8 bit range instead of the
@@ -243,10 +243,10 @@ static char n64Update(unsigned char chn)
 	 * on a N64, or maybe a little better. This should
 	 * help people realise they got what the paid for
 	 * instead of suspecting the adapter. */
-    if (last_built_report.n64.x == -128)
-        last_built_report.n64.x = -127;
-    if (last_built_report.n64.y == -128)
-        last_built_report.n64.y = -127;
+    if (last_built_report[chn].n64.x == -128)
+        last_built_report[chn].n64.x = -127;
+    if (last_built_report[chn].n64.y == -128)
+        last_built_report[chn].n64.y = -127;
 
 	return 0;
 }
@@ -286,15 +286,15 @@ static char n64Probe(unsigned char chn)
 
 static char n64Changed(unsigned char chn)
 {
-	return memcmp(&last_built_report, &last_sent_report, sizeof(gamepad_data));
+	return memcmp(&last_built_report[chn], &last_sent_report[chn], sizeof(gamepad_data));
 }
 
 static void n64GetReport(unsigned char chn, gamepad_data *dst)
 {
 	if (dst)
-		memcpy(dst, &last_built_report, sizeof(gamepad_data));
+		memcpy(dst, &last_built_report[chn], sizeof(gamepad_data));
 
-	memcpy(&last_sent_report, &last_built_report, sizeof(gamepad_data));
+	memcpy(&last_sent_report[chn], &last_built_report[chn], sizeof(gamepad_data));
 }
 
 static void n64SetVibration(unsigned char chn, char enable)

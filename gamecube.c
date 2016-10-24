@@ -84,30 +84,30 @@ void gc_decodeAnswer(unsigned char chn, unsigned char data[8])
 	56-63	Right Btn Val
  */
 
-	last_built_report.pad_type = PAD_TYPE_GAMECUBE;
-	last_built_report.gc.buttons = data[0] | data[1] << 8;
+	last_built_report[chn].pad_type = PAD_TYPE_GAMECUBE;
+	last_built_report[chn].gc.buttons = data[0] | data[1] << 8;
 	x = data[2];
 	y = data[3];
 	cx = data[4];
 	cy = data[5];
-	last_built_report.gc.lt = data[6];
-	last_built_report.gc.rt = data[7];
-	memcpy(last_built_report.gc.raw_data, data, 8);
+	last_built_report[chn].gc.lt = data[6];
+	last_built_report[chn].gc.rt = data[7];
+	memcpy(last_built_report[chn].gc.raw_data, data, 8);
 
 	if (origins_set[chn]) {
-		last_built_report.gc.x = ((int)x-(int)orig_x[chn]);
-		last_built_report.gc.y = ((int)y-(int)orig_y[chn]);
-		last_built_report.gc.cx = ((int)cx-(int)orig_cx[chn]);
-		last_built_report.gc.cy = ((int)cy-(int)orig_cy[chn]);
+		last_built_report[chn].gc.x = ((int)x-(int)orig_x[chn]);
+		last_built_report[chn].gc.y = ((int)y-(int)orig_y[chn]);
+		last_built_report[chn].gc.cx = ((int)cx-(int)orig_cx[chn]);
+		last_built_report[chn].gc.cy = ((int)cy-(int)orig_cy[chn]);
 	} else {
 		orig_x[chn] = x;
 		orig_y[chn] = y;
 		orig_cx[chn] = cx;
 		orig_cy[chn] = cy;
-		last_built_report.gc.x = 0;
-		last_built_report.gc.y = 0;
-		last_built_report.gc.cx = 0;
-		last_built_report.gc.cy = 0;
+		last_built_report[chn].gc.x = 0;
+		last_built_report[chn].gc.y = 0;
+		last_built_report[chn].gc.cx = 0;
+		last_built_report[chn].gc.cy = 0;
 		origins_set[chn] = 1;
 	}
 }
@@ -150,13 +150,13 @@ static char gamecubeProbe(unsigned char chn)
 
 static char gamecubeChanged(unsigned char chn)
 {
-	return memcmp(&last_built_report, &last_sent_report, sizeof(gamepad_data));
+	return memcmp(&last_built_report[chn], &last_sent_report[chn], sizeof(gamepad_data));
 }
 
 static void gamecubeGetReport(unsigned char chn, gamepad_data *dst)
 {
 	if (dst)
-		memcpy(dst, &last_built_report, sizeof(gamepad_data));
+		memcpy(dst, &last_built_report[chn], sizeof(gamepad_data));
 }
 
 static void gamecubeVibration(unsigned char chn, char enable)

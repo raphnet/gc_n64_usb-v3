@@ -83,10 +83,10 @@ typedef struct {
 } Gamepad;
 
 /* What was most recently read from the controller */
-extern gamepad_data last_built_report;
+extern gamepad_data last_built_report[GAMEPAD_MAX_CHANNELS];
 
 /* What was most recently sent to the host */
-extern gamepad_data last_sent_report;
+extern gamepad_data last_sent_report[GAMEPAD_MAX_CHANNELS];
 
 #endif // _gamepads_h__
 
