@@ -121,7 +121,7 @@ static char gamecubeUpdate(unsigned char chn)
 	tmpdata[1] = GC_GETSTATUS2;
 	tmpdata[2] = GC_GETSTATUS3(gc_rumbling[chn]);
 
-	count = gcn64_transaction(GCN64_CHANNEL_0, tmpdata, 3, tmpdata, GC_GETSTATUS_REPLY_LENGTH);
+	count = gcn64_transaction(chn, tmpdata, 3, tmpdata, GC_GETSTATUS_REPLY_LENGTH);
 	if (count != GC_GETSTATUS_REPLY_LENGTH) {
 		return 1;
 	}
