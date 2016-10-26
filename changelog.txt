@@ -1,4 +1,4 @@
-- October 10, 2016 : Version 3.3.0
+- October 25, 2016 : Version 3.3.0
   - Implement multi player support (maximum two on Atmega32u2 due to endpoint
   limit). New personalities, each with unique USB PID and product name:
     - Dual GC/N64 to USB mode
