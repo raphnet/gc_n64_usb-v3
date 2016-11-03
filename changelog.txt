@@ -1,3 +1,6 @@
+- Novermber 2, 2016 : Version 3.3.1
+  - Fix freeze when only one joystick was used in dual controller mode.
+
 - October 25, 2016 : Version 3.3.0
   - Implement multi player support (maximum two on Atmega32u2 due to endpoint
   limit). New personalities, each with unique USB PID and product name:
