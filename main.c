@@ -583,28 +583,19 @@ int main(void)
 				break;
 
 			case STATE_WAIT_INTERRUPT_READY:
-				if (usb_interruptReady_ep1()) {
+				/* Wait until one of the interrupt endpoint is ready */
+				if (usb_interruptReady_ep1() || (num_players>1 && usb_interruptReady_ep3())) {
 					state = STATE_TRANSMIT;
 				}
 				break;
 
 			case STATE_TRANSMIT:
-				usb_interruptSend_ep1(usbpad_getReportBuffer(&usbpads[0]), usbpad_getReportSize());
-				if (num_players > 1) {
-					state = STATE_WAIT_INTERRUPT_READY_P2;
-				} else {
-					state = STATE_WAIT_POLLTIME;
+				if (usb_interruptReady_ep1()) {
+					usb_interruptSend_ep1(usbpad_getReportBuffer(&usbpads[0]), usbpad_getReportSize());
 				}
-				break;
-
-			case STATE_WAIT_INTERRUPT_READY_P2:
-				if (usb_interruptReady_ep3()) {
-					state = STATE_TRANSMIT_P2;
+				if (num_players>1 && usb_interruptReady_ep3()) {
+					usb_interruptSend_ep3(usbpad_getReportBuffer(&usbpads[1]), usbpad_getReportSize());
 				}
-				break;
-
-			case STATE_TRANSMIT_P2:
-				usb_interruptSend_ep3(usbpad_getReportBuffer(&usbpads[1]), usbpad_getReportSize());
 				state = STATE_WAIT_POLLTIME;
 				break;
 
