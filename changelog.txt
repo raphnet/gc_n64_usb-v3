@@ -1,4 +1,7 @@
-- Novermber 2, 2016 : Version 3.3.1
+- November 27, 2016 : Version 3.3.2
+  - Fix the get controller type command
+
+- November 2, 2016 : Version 3.3.1
   - Fix freeze when only one joystick was used in dual controller mode.
 
 - October 25, 2016 : Version 3.3.0
