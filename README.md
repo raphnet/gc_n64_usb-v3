@@ -1,11 +1,14 @@
-# Gamecube/N64 to USB adapter
+# Gamecube/N64 to USB adapter firmware (3rd generation)
 
 ## Introduction
 
 This is the source code for a Gamecube/N64 controller to USB adapter firmware
 meant to run on [raphnet.net Multiuse PCB-X](http://www.raphnet.net/electronique/multiuse_pcbX/index_en.php).
 
-The project homepage is located at: http://www.raphnet.net/electronique/multiuse_pcbX/index.php
+## Homepage
+
+* English: [Gamecube/N64 controller to USB adapter (Third generation)](http://www.raphnet.net/electronique/gcn64_usb_adapter_gen3/index_en.php)
+* French: [Adaptateur manette Gamecube/N64 à USB (Troisième génération)](http://www.raphnet.net/electronique/gcn64_usb_adapter_gen3/index.php)
 
 ## License
 
