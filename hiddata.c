@@ -96,6 +96,8 @@ static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 			// TODO : Range checking
 			// cmdbuf[] : RQ, CHN, LEN, data[]
 			channel = cmdbuf[1];
+			if (channel >= NUM_CHANNELS)
+				break;
 			cmdbuf_len = gcn64_transaction(channel, cmdbuf+3, cmdbuf[2], cmdbuf + 3, CMDBUF_SIZE-3);
 			cmdbuf[2] = cmdbuf_len;
 			cmdbuf_len += 3; // Answer: RQ, CHN, LEN, data[]
@@ -131,7 +133,10 @@ static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 		case RQ_GCN64_GET_CONTROLLER_TYPE:
 			// CMD : RQ, CHN
 			// Answer: RQ, CHN, TYPE
-			cmdbuf[2] = current_pad_type;
+			channel = cmdbuf[1];
+			if (channel >= NUM_CHANNELS)
+				break;
+			cmdbuf[2] = current_pad_type[channel];
 			cmdbuf_len = 3;
 			break;
 		case RQ_GCN64_SET_VIBRATION:

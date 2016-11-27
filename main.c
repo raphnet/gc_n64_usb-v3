@@ -364,13 +364,13 @@ void hwinit(void)
 }
 
 
-unsigned char current_pad_type = CONTROLLER_IS_ABSENT;
+unsigned char current_pad_type[NUM_CHANNELS] = { };
 
 Gamepad *detectPad(unsigned char chn)
 {
-	current_pad_type = gcn64_detectController(chn);
+	current_pad_type[chn] = gcn64_detectController(chn);
 
-	switch (current_pad_type)
+	switch (current_pad_type[chn])
 	{
 		case CONTROLLER_IS_ABSENT:
 		case CONTROLLER_IS_UNKNOWN:
