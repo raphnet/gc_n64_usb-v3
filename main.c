@@ -402,15 +402,6 @@ void eeprom_app_ready(void)
 	g_usb_strings[USB_STRING_SERIAL_IDX] = serial_from_eeprom;
 }
 
-
-void pollDelay(void)
-{
-	int i;
-	for (i=0; i<g_eeprom_data.cfg.poll_interval[0]; i++) {
-		_delay_ms(1);
-	}
-}
-
 static struct usbpad usbpads[MAX_PLAYERS];
 static char g_polling_suspended = 0;
 
