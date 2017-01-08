@@ -92,7 +92,10 @@ void gc_decodeAnswer(unsigned char chn, unsigned char data[8])
 	cy = data[5];
 	last_built_report[chn].gc.lt = data[6];
 	last_built_report[chn].gc.rt = data[7];
+
+#ifdef PAD_DATA_HAS_RAW
 	memcpy(last_built_report[chn].gc.raw_data, data, 8);
+#endif
 
 	if (origins_set[chn]) {
 		last_built_report[chn].gc.x = ((int)x-(int)orig_x[chn]);

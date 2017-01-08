@@ -1,6 +1,8 @@
 #ifndef _gamepads_h__
 #define _gamepads_h__
 
+#undef PAD_DATA_HAS_RAW
+
 #define PAD_TYPE_NONE       0
 #define PAD_TYPE_N64        4
 #define PAD_TYPE_GAMECUBE   5
@@ -12,7 +14,9 @@ typedef struct _n64_pad_data {
 	unsigned char pad_type; // PAD_TYPE_N64
 	char x,y;
 	unsigned short buttons;
+#ifdef PAD_DATA_HAS_RAW
 	unsigned char raw_data[N64_RAW_SIZE];
+#endif
 } n64_pad_data;
 
 #define N64_BTN_A			0x8000
@@ -38,7 +42,9 @@ typedef struct _gc_pad_data {
 	char x,y,cx,cy;
 	unsigned char lt,rt;
 	unsigned short buttons;
+#ifdef PAD_DATA_HAS_RAW
 	unsigned char raw_data[GC_RAW_SIZE];
+#endif
 } gc_pad_data;
 
 #define GC_BTN_A			0x0001
