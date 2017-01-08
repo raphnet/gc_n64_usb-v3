@@ -37,6 +37,7 @@
 #include "usbstrings.h"
 #include "intervaltimer.h"
 #include "requests.h"
+#include "stkchk.h"
 
 #define MAX_PLAYERS		2
 
@@ -444,6 +445,7 @@ int main(void)
 	usart1_init();
 	eeprom_init();
 	intervaltimer_init();
+	stkchk_init();
 
 	switch (g_eeprom_data.cfg.mode)
 	{
@@ -510,6 +512,10 @@ int main(void)
 	while (1)
 	{
 		static char last_v[MAX_PLAYERS] = { };
+
+		if (stkchk_verify()) {
+			enterBootLoader();
+		}
 
 		usb_doTasks();
 		hiddata_doTask(&hiddata_ops);
