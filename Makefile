@@ -7,7 +7,7 @@ include Makefile.inc
 PROGNAME=gcn64usb
 OBJDIR=objs-$(PROGNAME)
 CPU=atmega32u2
-CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT -DVERSIONSTR=$(VERSIONSTR) -DVERSIONSTR_SHORT=$(VERSIONSTR_SHORT)
+CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -DUART1_STDOUT -DVERSIONSTR=$(VERSIONSTR) -DVERSIONSTR_SHORT=$(VERSIONSTR_SHORT) -std=gnu99
 LDFLAGS=-mmcu=$(CPU) -Wl,-Map=$(PROGNAME).map
 HEXFILE=$(PROGNAME).hex
 
@@ -58,3 +58,7 @@ chip_erase:
 
 reset:
 	dfu-programmer atmega32u2 reset
+
+restart:
+	- ./scripts/enter_bootloader.sh
+	./scripts/start.sh $(CPU)

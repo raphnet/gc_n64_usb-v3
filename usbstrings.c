@@ -17,13 +17,32 @@
 #include <stdlib.h> // for wchar_t
 #include "usbstrings.h"
 
+static wchar_t product_string[PRODUCT_STRING_MAXCHARS]; // = L"GC/N64 to USB v"VERSIONSTR_SHORT;
+
 const wchar_t *g_usb_strings[] = {
 	[0] = L"raphnet technologies", 	// 1 : Vendor
-	[1] = L"GC/N64 to USB v"VERSIONSTR_SHORT,	// 2: Product
+	[1] = product_string,	// 2: Product
 	[2] = L"123456",				// 3 : Serial
 };
 
-void usbstrings_changeProductString(const wchar_t *str)
+void usbstrings_changeProductString_P(const char *str)
 {
-	g_usb_strings[1] = str;
+	const char *s = str;
+	wchar_t *d = product_string;
+	uint8_t c;
+	int n = 0;
+
+	do {
+		/* Make sure target is always NUL terminated. */
+		n++;
+		if (n == PRODUCT_STRING_MAXCHARS) {
+			*d = 0;
+			break;
+		}
+
+		c = pgm_read_byte(s);
+
+		*d = c;
+		s++; d++;
+	} while (c);
 }

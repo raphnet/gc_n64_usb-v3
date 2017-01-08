@@ -10,6 +10,7 @@
 #define RQ_GCN64_GET_CONTROLLER_TYPE	0x06
 #define RQ_GCN64_SET_VIBRATION			0x07
 #define RQ_GCN64_RAW_SI_COMMAND			0x80
+#define RQ_GCN64_BLOCK_IO				0x81
 #define RQ_GCN64_JUMP_TO_BOOTLOADER		0xFF
 
 /* Configuration parameters and constants */

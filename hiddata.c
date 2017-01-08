@@ -25,8 +25,8 @@
 #include "version.h"
 #include "main.h"
 
-// dataHidReport is 40 bytes.
-#define CMDBUF_SIZE	41
+// dataHidReport is 63 bytes. Endpoint is 64 bytes.
+#define CMDBUF_SIZE 64
 
 #define STATE_IDLE			0
 #define STATE_NEW_COMMAND	1	// New command in buffer
@@ -72,6 +72,51 @@ uint8_t hiddata_set_report(void *ctx, const struct usb_request *rq, const uint8_
 	cmdbuf_len = len;
 
 	return 0;
+}
+
+static uint8_t processBlockIO(void)
+{
+	uint8_t requestCopy[CMDBUF_SIZE];
+	int i, rx_offset = 0, rx;
+	uint8_t chn, n_tx, n_rx;
+
+	memcpy(requestCopy, cmdbuf, CMDBUF_SIZE);
+	memset(cmdbuf + 1, 0xff, CMDBUF_SIZE-1);
+
+	for (rx_offset = 1, i=1; i<CMDBUF_SIZE; ) {
+		if (i + 3 >= CMDBUF_SIZE)
+			break;
+
+		chn = requestCopy[i];
+		if (chn == 0xff)
+			break;
+		i++;
+		n_tx = requestCopy[i];
+		i++;
+		n_rx = requestCopy[i];
+		i++;
+		if (n_tx == 0)
+			continue;
+
+		if (rx_offset + 1 + n_rx >= CMDBUF_SIZE) {
+			break;
+		}
+
+		rx = gcn64_transaction(chn, requestCopy + i, n_tx, cmdbuf + rx_offset + 1, n_rx);
+		cmdbuf[rx_offset] = n_rx;
+		if (rx <= 0) {
+			// timeout
+			cmdbuf[rx_offset] |= 0x80;
+		} else if (rx < n_rx) {
+			// less than expected
+			cmdbuf[rx_offset] |= 0x40;
+		}
+		rx_offset += n_rx + 1;
+
+		i += n_tx;
+	}
+
+	return 63;
 }
 
 static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
@@ -146,6 +191,9 @@ static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 				ops->forceVibration(cmdbuf[1], cmdbuf[2]);
 			}
 			cmdbuf_len = 3;
+			break;
+		case RQ_GCN64_BLOCK_IO:
+			cmdbuf_len = processBlockIO();
 			break;
 	}
 

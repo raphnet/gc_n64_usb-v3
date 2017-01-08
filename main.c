@@ -37,16 +37,17 @@
 #include "usbstrings.h"
 #include "intervaltimer.h"
 #include "requests.h"
+#include "stkchk.h"
 
 #define MAX_PLAYERS		2
 
-#define GCN64_USB_PID	0x001D
-#define N64_USB_PID		0x0020
-#define GC_USB_PID		0x0021
+#define GCN64_USB_PID	0x0032
+#define N64_USB_PID		0x0033
+#define GC_USB_PID		0x0034
 
-#define DUAL_GCN64_USB_PID	0x0022
-#define DUAL_N64_USB_PID	0x0030
-#define DUAL_GC_USB_PID		0x0031
+#define DUAL_GCN64_USB_PID	0x0035
+#define DUAL_N64_USB_PID	0x0036
+#define DUAL_GC_USB_PID		0x0037
 
 /* Those .c files are included rather than linked for we
  * want the sizeof() operator to work on the arrays */
@@ -54,6 +55,7 @@
 #include "dataHidReport.c"
 
 #define MAX_READ_ERRORS	30
+static uint8_t error_count[MAX_PLAYERS] = { };
 
 struct cfg0 {
 	struct usb_configuration_descriptor configdesc;
@@ -402,15 +404,6 @@ void eeprom_app_ready(void)
 	g_usb_strings[USB_STRING_SERIAL_IDX] = serial_from_eeprom;
 }
 
-
-void pollDelay(void)
-{
-	int i;
-	for (i=0; i<g_eeprom_data.cfg.poll_interval[0]; i++) {
-		_delay_ms(1);
-	}
-}
-
 static struct usbpad usbpads[MAX_PLAYERS];
 static char g_polling_suspended = 0;
 
@@ -442,36 +435,37 @@ int main(void)
 {
 	Gamepad *pads[MAX_PLAYERS] = { };
 	gamepad_data pad_data;
-	unsigned char gamepad_vibrate = 0;
-	unsigned char state = STATE_WAIT_POLLTIME;
-	int error_count[MAX_PLAYERS] = { };
-	int i;
-	int channel;
-	int num_players = 1;
+	uint8_t gamepad_vibrate = 0;
+	uint8_t state = STATE_WAIT_POLLTIME;
+	uint8_t channel;
+	uint8_t num_players = 1;
+	uint8_t i;
 
 	hwinit();
 	usart1_init();
 	eeprom_init();
 	intervaltimer_init();
+	stkchk_init();
 
 	switch (g_eeprom_data.cfg.mode)
 	{
 		default:
 		case CFG_MODE_STANDARD:
+			usbstrings_changeProductString_P(PSTR("GC/N64 to USB v"VERSIONSTR_SHORT));
 			break;
 
 		case CFG_MODE_N64_ONLY:
-			usbstrings_changeProductString(L"N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = N64_USB_PID;
 			break;
 
 		case CFG_MODE_GC_ONLY:
-			usbstrings_changeProductString(L"Gamecube to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Gamecube to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = GC_USB_PID;
 			break;
 
 		case CFG_MODE_2P_STANDARD:
-			usbstrings_changeProductString(L"Dual GC/N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual GC/N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GCN64_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
@@ -480,7 +474,7 @@ int main(void)
 			break;
 
 		case CFG_MODE_2P_N64_ONLY:
-			usbstrings_changeProductString(L"Dual N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_N64_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
@@ -489,7 +483,7 @@ int main(void)
 			break;
 
 		case CFG_MODE_2P_GC_ONLY:
-			usbstrings_changeProductString(L"Dual Gamecube to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual Gamecube to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GC_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
@@ -519,6 +513,10 @@ int main(void)
 	while (1)
 	{
 		static char last_v[MAX_PLAYERS] = { };
+
+		if (stkchk_verify()) {
+			enterBootLoader();
+		}
 
 		usb_doTasks();
 		hiddata_doTask(&hiddata_ops);
