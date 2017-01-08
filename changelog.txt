@@ -1,3 +1,7 @@
+- January 8, 2017 : Version 3.4.0
+  - New IO request for even lower latency when using the raphnetraw plugins
+  - Reduced memory footprint
+
 - November 27, 2016 : Version 3.3.2
   - Fix the get controller type command
 
