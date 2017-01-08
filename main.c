@@ -55,6 +55,7 @@
 #include "dataHidReport.c"
 
 #define MAX_READ_ERRORS	30
+static uint8_t error_count[MAX_PLAYERS] = { };
 
 struct cfg0 {
 	struct usb_configuration_descriptor configdesc;
@@ -434,12 +435,11 @@ int main(void)
 {
 	Gamepad *pads[MAX_PLAYERS] = { };
 	gamepad_data pad_data;
-	unsigned char gamepad_vibrate = 0;
-	unsigned char state = STATE_WAIT_POLLTIME;
-	int error_count[MAX_PLAYERS] = { };
-	int i;
-	int channel;
-	int num_players = 1;
+	uint8_t gamepad_vibrate = 0;
+	uint8_t state = STATE_WAIT_POLLTIME;
+	uint8_t channel;
+	uint8_t num_players = 1;
+	uint8_t i;
 
 	hwinit();
 	usart1_init();
@@ -451,20 +451,21 @@ int main(void)
 	{
 		default:
 		case CFG_MODE_STANDARD:
+			usbstrings_changeProductString_P(PSTR("GC/N64 to USB v"VERSIONSTR_SHORT));
 			break;
 
 		case CFG_MODE_N64_ONLY:
-			usbstrings_changeProductString(L"N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = N64_USB_PID;
 			break;
 
 		case CFG_MODE_GC_ONLY:
-			usbstrings_changeProductString(L"Gamecube to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Gamecube to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = GC_USB_PID;
 			break;
 
 		case CFG_MODE_2P_STANDARD:
-			usbstrings_changeProductString(L"Dual GC/N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual GC/N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GCN64_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
@@ -473,7 +474,7 @@ int main(void)
 			break;
 
 		case CFG_MODE_2P_N64_ONLY:
-			usbstrings_changeProductString(L"Dual N64 to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_N64_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
@@ -482,7 +483,7 @@ int main(void)
 			break;
 
 		case CFG_MODE_2P_GC_ONLY:
-			usbstrings_changeProductString(L"Dual Gamecube to USB v"VERSIONSTR_SHORT);
+			usbstrings_changeProductString_P(PSTR("Dual Gamecube to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GC_USB_PID;
 			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
 			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
