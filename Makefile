@@ -58,3 +58,7 @@ chip_erase:
 
 reset:
 	dfu-programmer atmega32u2 reset
+
+restart:
+	- ./scripts/enter_bootloader.sh
+	./scripts/start.sh $(CPU)
