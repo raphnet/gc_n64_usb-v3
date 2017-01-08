@@ -218,11 +218,13 @@ static char n64Update(unsigned char chn)
 	last_built_report[chn].n64.x = x;
 	last_built_report[chn].n64.y = y;
 
+#ifdef PAD_DATA_HAS_RAW
 	/* Copy all the data as-is for the raw field */
 	last_built_report[chn].n64.raw_data[0] = btns1;
 	last_built_report[chn].n64.raw_data[1] = btns2;
 	last_built_report[chn].n64.raw_data[2] = x;
 	last_built_report[chn].n64.raw_data[3] = y;
+#endif
 
 	/* Some cheap non-official controllers
 	 * use the full 8 bit range instead of the
