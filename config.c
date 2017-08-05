@@ -76,6 +76,9 @@ unsigned char config_getParam(unsigned char param, unsigned char *value, unsigne
 		case CFG_PARAM_FULL_SLIDERS:
 			*value = (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) ? 1 : 0;
 			return 1;
+		case CFG_PARAM_TRIGGERS_AS_BUTTONS:
+			*value = (g_eeprom_data.cfg.flags & CFG_PARAM_TRIGGERS_AS_BUTTONS) ? 1 : 0;
+			return 1;
 	}
 
 	return 0;

@@ -12,6 +12,7 @@ struct eeprom_cfg {
 
 #define FLAG_GC_FULL_SLIDERS	1
 #define FLAG_GC_INVERT_TRIGS	2
+#define FLAG_GC_SLIDERS_AS_BUTTONS	4
 
 void eeprom_app_write_defaults(void);
 void eeprom_app_ready(void);

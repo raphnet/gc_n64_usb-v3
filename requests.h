@@ -37,6 +37,7 @@
 #define CFG_PARAM_GC_CSTICK_SQUARE	0x22 // Not implemented
 #define CFG_PARAM_FULL_SLIDERS		0x23
 #define CFG_PARAM_INVERT_TRIG		0x24
+#define CFG_PARAM_TRIGGERS_AS_BUTTONS	0x25
 
 
 #endif
