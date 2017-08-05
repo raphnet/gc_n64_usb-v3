@@ -98,6 +98,7 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[U
 {
 	int16_t xval,yval,cxval,cyval,ltrig,rtrig;
 	uint16_t buttons;
+	uint16_t gcbuttons = gc_data->buttons;
 
 	/* Force official range */
 	xval = minmax(gc_data->x, -100, 100);
@@ -114,25 +115,37 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[U
 	cxval *= 160;
 	cyval *= -160;
 
-	if (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) {
-		int16_t lts = (int16_t)ltrig - 127;
-		int16_t rts = (int16_t)rtrig - 127;
-		lts *= 126;
-		ltrig = lts;
-		rts *= 126;
-		rtrig = rts;
+	if (g_eeprom_data.cfg.flags & FLAG_GC_SLIDERS_AS_BUTTONS) {
+		/* In this mode, the sliders control buttons */
+		if (ltrig > 32)
+			gcbuttons |= GC_BTN_L;
+		if (rtrig > 32)
+			gcbuttons |= GC_BTN_R;
 
-	} else {
-		/* Scale 0...255 to 0...16000 */
-		ltrig *= 63;
-		if (ltrig > 16000) ltrig=16000;
-		rtrig *= 63;
-		if (rtrig > 16000) rtrig=16000;
+		/* And the sliders analog values are fixed. */
+		ltrig = rtrig = 0;
 	}
+	else {
+		if (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) {
+			int16_t lts = (int16_t)ltrig - 127;
+			int16_t rts = (int16_t)rtrig - 127;
+			lts *= 126;
+			ltrig = lts;
+			rts *= 126;
+			rtrig = rts;
 
-	if (g_eeprom_data.cfg.flags & FLAG_GC_INVERT_TRIGS) {
-		ltrig = -ltrig;
-		rtrig = -rtrig;
+		} else {
+			/* Scale 0...255 to 0...16000 */
+			ltrig *= 63;
+			if (ltrig > 16000) ltrig=16000;
+			rtrig *= 63;
+			if (rtrig > 16000) rtrig=16000;
+		}
+
+		if (g_eeprom_data.cfg.flags & FLAG_GC_INVERT_TRIGS) {
+			ltrig = -ltrig;
+			rtrig = -rtrig;
+		}
 	}
 
 	/* Unsign for HID report */
@@ -159,7 +172,7 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[U
 	dstbuf[11] = ((uint8_t*)&rtrig)[0];
 	dstbuf[12] = ((uint8_t*)&rtrig)[1];
 
-	buttons = mappings_do(MAPPING_GAMECUBE_DEFAULT, gc_data->buttons);
+	buttons = mappings_do(MAPPING_GAMECUBE_DEFAULT, gcbuttons);
 	btnsToReport(buttons, dstbuf+13);
 }
 
