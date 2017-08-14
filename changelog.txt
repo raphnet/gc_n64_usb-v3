@@ -1,3 +1,6 @@
+- August 14, 2017 : Version 3.4.1
+  - Add a "triggers as buttons" mode for Gamecube controllers
+
 - January 8, 2017 : Version 3.4.0
   - New IO request for even lower latency when using the raphnetraw plugins
   - Reduced memory footprint
