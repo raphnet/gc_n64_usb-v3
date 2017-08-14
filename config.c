@@ -77,7 +77,7 @@ unsigned char config_getParam(unsigned char param, unsigned char *value, unsigne
 			*value = (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) ? 1 : 0;
 			return 1;
 		case CFG_PARAM_TRIGGERS_AS_BUTTONS:
-			*value = (g_eeprom_data.cfg.flags & CFG_PARAM_TRIGGERS_AS_BUTTONS) ? 1 : 0;
+			*value = (g_eeprom_data.cfg.flags & FLAG_GC_SLIDERS_AS_BUTTONS) ? 1 : 0;
 			return 1;
 	}
 
@@ -129,6 +129,12 @@ unsigned char config_setParam(unsigned char param, const unsigned char *value)
 				g_eeprom_data.cfg.flags &= ~FLAG_GC_INVERT_TRIGS;
 			}
 			break;
+		case CFG_PARAM_TRIGGERS_AS_BUTTONS:
+			if (value[0]) {
+				g_eeprom_data.cfg.flags |= FLAG_GC_SLIDERS_AS_BUTTONS;
+			} else {
+				g_eeprom_data.cfg.flags &= ~FLAG_GC_SLIDERS_AS_BUTTONS;
+			}
 		default:
 			return 0;
 	}
