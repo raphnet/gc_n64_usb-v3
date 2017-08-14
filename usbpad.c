@@ -117,9 +117,9 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[U
 
 	if (g_eeprom_data.cfg.flags & FLAG_GC_SLIDERS_AS_BUTTONS) {
 		/* In this mode, the sliders control buttons */
-		if (ltrig > 32)
+		if (ltrig > 64)
 			gcbuttons |= GC_BTN_L;
-		if (rtrig > 32)
+		if (rtrig > 64)
 			gcbuttons |= GC_BTN_R;
 
 		/* And the sliders analog values are fixed. */
