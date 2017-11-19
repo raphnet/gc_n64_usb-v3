@@ -180,7 +180,7 @@ static void buf2EP(uint8_t epnum, const void *src, uint16_t len, uint16_t max_le
  */
 static void longDescriptorHelper(const uint8_t *data, uint16_t len, uint16_t rq_len, uint8_t progmem)
 {
-	uint16_t todo = rq_len;
+	uint16_t todo = rq_len > len ? len : rq_len;
 	uint16_t pos = 0;
 
 	while(1)
@@ -208,7 +208,7 @@ static void handleSetupPacket(struct usb_request *rq)
 	char unhandled = 0;
 
 #ifdef VERBOSE
-	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
+	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, idx: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wIndex, rq->wLength);
 #endif
 
 	if (USB_RQT_IS_HOST_TO_DEVICE(rq->bmRequestType))
