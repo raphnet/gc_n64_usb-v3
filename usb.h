@@ -175,6 +175,8 @@ struct usb_hid_parameters {
 	uint16_t reportdesc_len;
 	const unsigned char *reportdesc;
 
+	int endpoint_size;
+
 	// Warning: Called from interrupt handler. Implement accordingly.
 	void *ctx;
 	uint16_t (*getReport)(void *ctx, struct usb_request *rq, const uint8_t **dat);
@@ -201,6 +203,8 @@ struct usb_parameters {
 
 char usb_interruptReady_ep1(void);
 void usb_interruptSend_ep1(void *data, int len);
+char usb_interruptReady_ep2(void);
+void usb_interruptSend_ep2(void *data, int len);
 char usb_interruptReady_ep3(void);
 void usb_interruptSend_ep3(void *data, int len);
 

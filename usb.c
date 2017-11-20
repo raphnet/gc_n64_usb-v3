@@ -37,6 +37,8 @@ static uint8_t g_device_state = STATE_DEFAULT;
 static uint8_t g_current_config;
 static void *interrupt_data;
 static volatile int interrupt_data_len = -1;
+static void *interrupt_data2;
+static volatile int interrupt_data_len2 = -1;
 static void *interrupt_data3;
 static volatile int interrupt_data_len3 = -1;
 
@@ -66,8 +68,28 @@ static int wcslen(const wchar_t *str)
 	return i;
 }
 
+/** Return the values for the UECFG1X register
+ *
+ * \return The EPSIZE bits if supported, 0xFF if invalid.
+ **/
+static uint8_t getEPsizebits(int epsize)
+{
+	switch(epsize)
+	{
+		case 64: return (1<<EPSIZE0)|(1<<EPSIZE1);
+		case 32: return (1<<EPSIZE1);
+		case 16: return (1<<EPSIZE0);
+		case 8: return 0;
+
+	}
+	return -1;
+}
+
 static void setupEndpoints()
 {
+	uint8_t epsize;
+	int i;
+
 	/*** EP0 ***/
 
 	// Order from figure 23-2
@@ -76,7 +98,8 @@ static void setupEndpoints()
 	UECONX = 1<<EPEN; // activate endpoint
 	UECFG0X = 0; // Control OUT
 	UEIENX = (1<<RXSTPE) | (1<<RXOUTE) | (1<<NAKINE); /* | (1<<STALLEDE) | (1<<NAKOUTE) | (1<<TXINE) | (1<<RXOUTE) */;
-	UECFG1X |= (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
+	epsize = getEPsizebits(64);
+	UECFG1X |= epsize|(1<<ALLOC); // 64 bytes, one bank, and allocate
 	UEINTX = 0;
 
 	if (!(UESTA0X & (1<<CFGOK))) {
@@ -85,47 +108,22 @@ static void setupEndpoints()
 	}
 //	printf_P("ok\r\n");
 
-	/*** EP1 ***/
-	UENUM = 0x01;  // select endpoint
-
-	UECONX = 1<<EPEN; // activate endpoint
-	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
-	UEIENX = (1<<TXINE);
-	UECFG1X = (1<<EPSIZE0)|(1<<ALLOC); // 16 bytes, one bank, and allocate
-	UEINTX = 0;
-
-	if (!(UESTA0X & (1<<CFGOK))) {
-		printf_P(PSTR("CFG EP1 fail\r\n"));
-		return;
-	}
-
-	/*** EP2 ***/
-	UENUM = 0x02;  // select endpoint
-
-	UECONX = 1<<EPEN; // activate endpoint
-	UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
-//	UEIENX = (1<<TXINE);
-	UECFG1X = (1<<EPSIZE0)|(1<<EPSIZE1)|(1<<ALLOC); // 64 bytes, one bank, and allocate
-	UEINTX = 0;
-
-	if (!(UESTA0X & (1<<CFGOK))) {
-		printf_P(PSTR("CFG EP2 fail\r\n"));
-		return;
-	}
-
-	if (g_params->n_hid_interfaces > 2) {
-		/*** EP3 ***/
-		UENUM = 0x03;  // select endpoint
+	for (i=0; i<g_params->n_hid_interfaces; i++) {
+		UENUM = 0x01 + i;  // select endpoint
 
 		UECONX = 1<<EPEN; // activate endpoint
 		UECFG0X = (3<<6) | (1<<EPDIR); // Interrupt IN
 		UEIENX = (1<<TXINE);
-		UECFG1X = (1<<EPSIZE0)|(1<<ALLOC); // 16 bytes, one bank, and allocate
+		epsize = getEPsizebits(g_params->hid_params[i].endpoint_size);
+		if (epsize == 0xff) {
+			printf_P(PSTR("Invalid ep size\r\n"));
+			return;
+		}
+		UECFG1X = epsize|(1<<ALLOC); // one bank, and allocate
 		UEINTX = 0;
 
 		if (!(UESTA0X & (1<<CFGOK))) {
-			printf_P(PSTR("CFG EP3 fail\r\n"));
-			while(1);
+			printf_P(PSTR("CFG EP fail\r\n"));
 			return;
 		}
 	}
@@ -196,8 +194,8 @@ static void longDescriptorHelper(const uint8_t *data, uint16_t len, uint16_t rq_
 			buf2EP(0, data+pos, todo,
 					todo,
 					progmem);
-//			UEINTX &= ~(1<<TXINI);
-//			while (!(UEINTX & (1<<TXINI)));
+			UEINTX &= ~(1<<TXINI);
+			while (!(UEINTX & (1<<TXINI)));
 			break;
 		}
 	}
@@ -208,7 +206,7 @@ static void handleSetupPacket(struct usb_request *rq)
 	char unhandled = 0;
 
 #ifdef VERBOSE
-	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, idx: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wIndex, rq->wLength);
+	printf_P(PSTR("t: %02x, rq: 0x%02x, val: %04x, l: %d\r\n"), rq->bmRequestType, rq->bRequest, rq->wValue, rq->wLength);
 #endif
 
 	if (USB_RQT_IS_HOST_TO_DEVICE(rq->bmRequestType))
@@ -259,10 +257,10 @@ static void handleSetupPacket(struct usb_request *rq)
 					case USB_RQT_CLASS:
 						switch(rq->bRequest)
 						{
-							case HID_CLSRQ_SET_IDLE:
-								while (!(UEINTX & (1<<TXINI)));
-								UEINTX &= ~(1<<TXINI);
-								break;
+//							case HID_CLSRQ_SET_IDLE:
+//								while (!(UEINTX & (1<<TXINI)));
+//								UEINTX &= ~(1<<TXINI);
+//								break;
 							case HID_CLSRQ_SET_REPORT:
 								while (!(UEINTX & (1<<TXINI)));
 								UEINTX &= ~(1<<TXINI);
@@ -556,7 +554,9 @@ ISR(USB_GEN_vect)
 		UDINT &= ~(1<<WAKEUPE);
 		if (g_usb_suspend) {
 			g_usb_suspend = 0;
+#ifdef VERBOSE
 			printf_P(PSTR("WAKEUPI\r\n"));
+#endif
 			UDIEN &= ~(1<<WAKEUPE); // woke up. Not needed anymore.
 		}
 	}
@@ -660,6 +660,10 @@ ISR(USB_COM_vect)
 		handle_interrupt_xmit(1, &interrupt_data, &interrupt_data_len);
 	}
 
+	if (ueint & (1<<EPINT2)) {
+		handle_interrupt_xmit(2, &interrupt_data2, &interrupt_data_len2);
+	}
+
 	if (ueint & (1<<EPINT3)) {
 		handle_interrupt_xmit(3, &interrupt_data3, &interrupt_data_len3);
 	}
@@ -689,6 +693,28 @@ void usb_interruptSend_ep3(void *data, int len)
 	interrupt_data_len3 = len;
 
 	UENUM = 3;
+	UEIENX |= (1<<TXINE);
+
+	SREG = sreg;
+}
+
+char usb_interruptReady_ep2(void)
+{
+	return interrupt_data_len2 == -1;
+}
+
+void usb_interruptSend_ep2(void *data, int len)
+{
+	uint8_t sreg = SREG;
+
+	while (interrupt_data_len2 != -1) { }
+
+	cli();
+
+	interrupt_data2 = data;
+	interrupt_data_len2 = len;
+
+	UENUM = 2;
 	UEIENX |= (1<<TXINE);
 
 	SREG = sreg;

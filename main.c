@@ -297,18 +297,21 @@ static struct usb_parameters usb_params = {
 			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
 			.getReport = _usbpad_hid_get_report,
 			.setReport = _usbpad_hid_set_report,
+			.endpoint_size = 16,
 		},
 		[1] = {
 			.reportdesc = dataHidReport,
 			.reportdesc_len = sizeof(dataHidReport),
 			.getReport = hiddata_get_report,
 			.setReport = hiddata_set_report,
+			.endpoint_size = 64,
 		},
 		[2] = {
 			.reportdesc = gcn64_usbHidReportDescriptor,
 			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
 			.getReport = _usbpad_hid_get_report,
 			.setReport = _usbpad_hid_set_report,
+			.endpoint_size = 16,
 		},
 	},
 };
