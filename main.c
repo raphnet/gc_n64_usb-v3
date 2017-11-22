@@ -144,12 +144,12 @@ struct cfg0_2p {
 	struct usb_hid_descriptor hid;
 	struct usb_endpoint_descriptor ep1_in;
 
-	struct usb_interface_descriptor interface_admin;
-	struct usb_hid_descriptor hid_data;
-	struct usb_endpoint_descriptor ep2_in;
-
 	struct usb_interface_descriptor interface_p2;
 	struct usb_hid_descriptor hid_p2;
+	struct usb_endpoint_descriptor ep2_in;
+
+	struct usb_interface_descriptor interface_admin;
+	struct usb_hid_descriptor hid_data;
 	struct usb_endpoint_descriptor ep3_in;
 };
 
@@ -193,40 +193,11 @@ static const struct cfg0_2p cfg0_2p PROGMEM = {
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
 
-	// Second HID interface for config and update
-	.interface_admin = {
-		.bLength = sizeof(struct usb_interface_descriptor),
-		.bDescriptorType = INTERFACE_DESCRIPTOR,
-		.bInterfaceNumber = 1,
-		.bAlternateSetting = 0,
-		.bNumEndpoints = 1,
-		.bInterfaceClass = USB_DEVICE_CLASS_HID,
-		.bInterfaceSubClass = HID_SUBCLASS_NONE,
-		.bInterfaceProtocol = HID_PROTOCOL_NONE,
-	},
-	.hid_data = {
-		.bLength = sizeof(struct usb_hid_descriptor),
-		.bDescriptorType = HID_DESCRIPTOR,
-		.bcdHid = 0x0101,
-		.bCountryCode = HID_COUNTRY_NOT_SUPPORTED,
-		.bNumDescriptors = 1, // Only a report descriptor
-		.bClassDescriptorType = REPORT_DESCRIPTOR,
-		.wClassDescriptorLength = sizeof(dataHidReport),
-	},
-	.ep2_in = {
-		.bLength = sizeof(struct usb_endpoint_descriptor),
-		.bDescriptorType = ENDPOINT_DESCRIPTOR,
-		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 2, // 0x82
-		.bmAttributes = TRANSFER_TYPE_INT,
-		.wMaxPacketsize = 64,
-		.bInterval = LS_FS_INTERVAL_MS(1),
-	},
-
 	// Main interface, HID (player 2)
 	.interface_p2 = {
 		.bLength = sizeof(struct usb_interface_descriptor),
 		.bDescriptorType = INTERFACE_DESCRIPTOR,
-		.bInterfaceNumber = 2,
+		.bInterfaceNumber = 1,
 		.bAlternateSetting = 0,
 		.bNumEndpoints = 1,
 		.bInterfaceClass = USB_DEVICE_CLASS_HID,
@@ -242,12 +213,41 @@ static const struct cfg0_2p cfg0_2p PROGMEM = {
 		.bClassDescriptorType = REPORT_DESCRIPTOR,
 		.wClassDescriptorLength = sizeof(gcn64_usbHidReportDescriptor),
 	},
+	.ep2_in = {
+		.bLength = sizeof(struct usb_endpoint_descriptor),
+		.bDescriptorType = ENDPOINT_DESCRIPTOR,
+		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 2, // 0x82
+		.bmAttributes = TRANSFER_TYPE_INT,
+		.wMaxPacketsize = 16,
+		.bInterval = LS_FS_INTERVAL_MS(1),
+	},
+
+	// Second HID interface for config and update
+	.interface_admin = {
+		.bLength = sizeof(struct usb_interface_descriptor),
+		.bDescriptorType = INTERFACE_DESCRIPTOR,
+		.bInterfaceNumber = 2,
+		.bAlternateSetting = 0,
+		.bNumEndpoints = 1,
+		.bInterfaceClass = USB_DEVICE_CLASS_HID,
+		.bInterfaceSubClass = HID_SUBCLASS_NONE,
+		.bInterfaceProtocol = HID_PROTOCOL_NONE,
+	},
+	.hid_data = {
+		.bLength = sizeof(struct usb_hid_descriptor),
+		.bDescriptorType = HID_DESCRIPTOR,
+		.bcdHid = 0x0101,
+		.bCountryCode = HID_COUNTRY_NOT_SUPPORTED,
+		.bNumDescriptors = 1, // Only a report descriptor
+		.bClassDescriptorType = REPORT_DESCRIPTOR,
+		.wClassDescriptorLength = sizeof(dataHidReport),
+	},
 	.ep3_in = {
 		.bLength = sizeof(struct usb_endpoint_descriptor),
 		.bDescriptorType = ENDPOINT_DESCRIPTOR,
 		.bEndpointAddress = USB_RQT_DEVICE_TO_HOST | 3, // 0x83
 		.bmAttributes = TRANSFER_TYPE_INT,
-		.wMaxPacketsize = 16,
+		.wMaxPacketsize = 64,
 		.bInterval = LS_FS_INTERVAL_MS(1),
 	},
 };
@@ -305,13 +305,6 @@ static struct usb_parameters usb_params = {
 			.getReport = hiddata_get_report,
 			.setReport = hiddata_set_report,
 			.endpoint_size = 64,
-		},
-		[2] = {
-			.reportdesc = gcn64_usbHidReportDescriptor,
-			.reportdesc_len = sizeof(gcn64_usbHidReportDescriptor),
-			.getReport = _usbpad_hid_get_report,
-			.setReport = _usbpad_hid_set_report,
-			.endpoint_size = 16,
 		},
 	},
 };
@@ -482,44 +475,36 @@ int main(void)
 		case CFG_MODE_2P_STANDARD:
 			usbstrings_changeProductString_P(PSTR("Dual GC/N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GCN64_USB_PID;
-			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
-			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
-			usb_params.n_hid_interfaces = 3;
 			num_players = 2;
 			break;
 
 		case CFG_MODE_2P_N64_ONLY:
 			usbstrings_changeProductString_P(PSTR("Dual N64 to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_N64_USB_PID;
-			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
-			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
-			usb_params.n_hid_interfaces = 3;
 			num_players = 2;
 			break;
 
 		case CFG_MODE_2P_GC_ONLY:
 			usbstrings_changeProductString_P(PSTR("Dual Gamecube to USB v"VERSIONSTR_SHORT));
 			device_descriptor.idProduct = DUAL_GC_USB_PID;
-			usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
-			usb_params.configdesc_ttllen = sizeof(cfg0_2p);
-			usb_params.n_hid_interfaces = 3;
 			num_players = 2;
 			break;
 	}
 
+	// 2-players common
+	if (num_players == 2) {
+		usb_params.configdesc = (PGM_VOID_P)&cfg0_2p;
+		usb_params.configdesc_ttllen = sizeof(cfg0_2p);
+		usb_params.n_hid_interfaces = 3;
+		// Move the management interface is the last position
+		memcpy(usb_params.hid_params + 2, usb_params.hid_params + 1, sizeof(struct usb_hid_parameters));
+		// Add a second player interface between them
+		memcpy(usb_params.hid_params + 1, usb_params.hid_params + 0, sizeof(struct usb_hid_parameters));
+	}
+
 	for (i=0; i<num_players; i++) {
-		int hid_iface_id;
-
 		usbpad_init(&usbpads[i]);
-
-		// Skip interface 1 (always used for the dataReport)
-		if (i>0) {
-			hid_iface_id = i + 1;
-		} else {
-			hid_iface_id = i;
-		}
-
-		usb_params.hid_params[hid_iface_id].ctx = &usbpads[i];
+		usb_params.hid_params[i].ctx = &usbpads[i];
 	}
 
 	sei();
@@ -597,7 +582,7 @@ int main(void)
 
 			case STATE_WAIT_INTERRUPT_READY:
 				/* Wait until one of the interrupt endpoint is ready */
-				if (usb_interruptReady_ep1() || (num_players>1 && usb_interruptReady_ep3())) {
+				if (usb_interruptReady_ep1() || (num_players>1 && usb_interruptReady_ep2())) {
 					state = STATE_TRANSMIT;
 				}
 				break;
@@ -606,8 +591,8 @@ int main(void)
 				if (usb_interruptReady_ep1()) {
 					usb_interruptSend_ep1(usbpad_getReportBuffer(&usbpads[0]), usbpad_getReportSize());
 				}
-				if (num_players>1 && usb_interruptReady_ep3()) {
-					usb_interruptSend_ep3(usbpad_getReportBuffer(&usbpads[1]), usbpad_getReportSize());
+				if (num_players>1 && usb_interruptReady_ep2()) {
+					usb_interruptSend_ep2(usbpad_getReportBuffer(&usbpads[1]), usbpad_getReportSize());
 				}
 				state = STATE_WAIT_POLLTIME;
 				break;
