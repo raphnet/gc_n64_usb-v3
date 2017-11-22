@@ -41,13 +41,13 @@
 
 #define MAX_PLAYERS		2
 
-#define GCN64_USB_PID	0x0032
-#define N64_USB_PID		0x0033
-#define GC_USB_PID		0x0034
+#define GCN64_USB_PID	0x0038
+#define N64_USB_PID		0x0039
+#define GC_USB_PID		0x003A
 
-#define DUAL_GCN64_USB_PID	0x0035
-#define DUAL_N64_USB_PID	0x0036
-#define DUAL_GC_USB_PID		0x0037
+#define DUAL_GCN64_USB_PID	0x003B
+#define DUAL_N64_USB_PID	0x003C
+#define DUAL_GC_USB_PID		0x003D
 
 /* Those .c files are included rather than linked for we
  * want the sizeof() operator to work on the arrays */
