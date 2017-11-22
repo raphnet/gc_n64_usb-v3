@@ -7,6 +7,7 @@
 struct hiddata_ops {
 	void (*suspendPolling)(uint8_t suspend);
 	void (*forceVibration)(uint8_t channel, uint8_t force);
+	uint8_t (*getSupportedModes)(uint8_t *dst);
 };
 
 uint16_t hiddata_get_report(void *ctx, struct usb_request *rq, const uint8_t **dat);

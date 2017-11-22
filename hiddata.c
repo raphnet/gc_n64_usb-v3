@@ -195,6 +195,32 @@ static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 		case RQ_GCN64_BLOCK_IO:
 			cmdbuf_len = processBlockIO();
 			break;
+		case RQ_RNT_GET_SUPPORTED_REQUESTS:
+			cmdbuf[1] = RQ_GCN64_JUMP_TO_BOOTLOADER;
+			cmdbuf[2] = RQ_GCN64_RAW_SI_COMMAND;
+			cmdbuf[3] = RQ_GCN64_GET_CONFIG_PARAM;
+			cmdbuf[4] = RQ_GCN64_SET_CONFIG_PARAM;
+			cmdbuf[5] = RQ_GCN64_SUSPEND_POLLING;
+			cmdbuf[6] = RQ_GCN64_GET_VERSION;
+			cmdbuf[7] = RQ_GCN64_GET_SIGNATURE;
+			cmdbuf[8] = RQ_GCN64_GET_CONTROLLER_TYPE;
+			cmdbuf[9] = RQ_GCN64_SET_VIBRATION;
+			cmdbuf[10] = RQ_GCN64_BLOCK_IO;
+			cmdbuf[11] = RQ_RNT_GET_SUPPORTED_CFG_PARAMS;
+			cmdbuf[12] = RQ_RNT_GET_SUPPORTED_MODES;
+			cmdbuf[13] = RQ_RNT_GET_SUPPORTED_REQUESTS;
+			cmdbuf_len = 14;
+			break;
+		case RQ_RNT_GET_SUPPORTED_CFG_PARAMS:
+			cmdbuf_len = 1 + config_getSupportedParams(cmdbuf + 1);
+			break;
+		case RQ_RNT_GET_SUPPORTED_MODES:
+			cmdbuf_len = 1;
+			if (ops && ops->getSupportedModes) {
+				cmdbuf_len += ops->getSupportedModes(cmdbuf + 1);
+			}
+			break;
+
 	}
 
 #ifdef DEBUG

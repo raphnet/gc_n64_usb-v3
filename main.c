@@ -422,9 +422,21 @@ static void forceVibration(uint8_t channel, uint8_t force)
 	}
 }
 
+static uint8_t getSupportedModes(uint8_t *dst)
+{
+	dst[0] = CFG_MODE_STANDARD;
+	dst[1] = CFG_MODE_N64_ONLY;
+	dst[2] = CFG_MODE_GC_ONLY;
+	dst[3] = CFG_MODE_2P_STANDARD;
+	dst[4] = CFG_MODE_2P_N64_ONLY;
+	dst[5] = CFG_MODE_2P_GC_ONLY;
+	return 6;
+}
+
 static struct hiddata_ops hiddata_ops = {
 	.suspendPolling = setSuspendPolling,
 	.forceVibration = forceVibration,
+	.getSupportedModes = getSupportedModes,
 };
 
 #define STATE_WAIT_POLLTIME			0
