@@ -148,6 +148,10 @@ static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[U
 		}
 	}
 
+	if (g_eeprom_data.cfg.flags & FLAG_DISABLE_ANALOG_TRIGGERS) {
+		ltrig = rtrig = 0;
+	}
+
 	/* Unsign for HID report */
 	xval += 16000;
 	yval += 16000;

@@ -42,8 +42,40 @@ static void config_set_serial(char serial[SERIAL_NUM_LEN])
 	eeprom_commit();
 }
 
+struct paramAndFlag {
+	uint8_t param; // CFG_PARAM_* (requests.h)
+	uint32_t flag; // FLAG_* (config.h)
+};
+
+static struct paramAndFlag paramsAndFlags[] = {
+	{ CFG_PARAM_INVERT_TRIG, FLAG_GC_INVERT_TRIGS },
+	{ CFG_PARAM_FULL_SLIDERS, FLAG_GC_FULL_SLIDERS },
+	{ CFG_PARAM_TRIGGERS_AS_BUTTONS, FLAG_GC_SLIDERS_AS_BUTTONS },
+	{ CFG_PARAM_DISABLE_ANALOG_TRIGGERS, FLAG_DISABLE_ANALOG_TRIGGERS },
+
+	{  },
+};
+
+uint8_t config_getSupportedParams(uint8_t *dst)
+{
+	uint8_t n = 0, i;
+
+	dst[n++] = CFG_PARAM_MODE;
+	dst[n++] = CFG_PARAM_SERIAL;
+	for (i=0; i<NUM_CHANNELS; i++) {
+		dst[n++] = CFG_PARAM_POLL_INTERVAL0 + i;
+	}
+	for (i=0; paramsAndFlags[i].flag; i++) {
+		dst[n++] = paramsAndFlags[i].param;
+	}
+
+	return n;
+}
+
 unsigned char config_getParam(unsigned char param, unsigned char *value, unsigned char max_len)
 {
+	int i;
+
 	switch (param)
 	{
 		case CFG_PARAM_MODE:
@@ -70,15 +102,14 @@ unsigned char config_getParam(unsigned char param, unsigned char *value, unsigne
 			*value = g_eeprom_data.cfg.poll_interval[3];
 			return 1;
 #endif
-		case CFG_PARAM_INVERT_TRIG:
-			*value = (g_eeprom_data.cfg.flags & FLAG_GC_INVERT_TRIGS) ? 1 : 0;
-			return 1;
-		case CFG_PARAM_FULL_SLIDERS:
-			*value = (g_eeprom_data.cfg.flags & FLAG_GC_FULL_SLIDERS) ? 1 : 0;
-			return 1;
-		case CFG_PARAM_TRIGGERS_AS_BUTTONS:
-			*value = (g_eeprom_data.cfg.flags & FLAG_GC_SLIDERS_AS_BUTTONS) ? 1 : 0;
-			return 1;
+
+		default:
+			for (i=0; paramsAndFlags[i].flag; i++) {
+				if (param == paramsAndFlags[i].param) {
+					*value = (g_eeprom_data.cfg.flags & paramsAndFlags[i].flag) ? 1 : 0;
+					return 1;
+				}
+			}
 	}
 
 	return 0;
@@ -86,6 +117,8 @@ unsigned char config_getParam(unsigned char param, unsigned char *value, unsigne
 
 unsigned char config_setParam(unsigned char param, const unsigned char *value)
 {
+	int i;
+
 	if (!value)
 		return 0;
 
@@ -115,28 +148,24 @@ unsigned char config_setParam(unsigned char param, const unsigned char *value)
 			g_eeprom_data.cfg.poll_interval[3] = value[0];
 			break;
 #endif
-		case CFG_PARAM_FULL_SLIDERS:
-			if (value[0]) {
-				g_eeprom_data.cfg.flags |= FLAG_GC_FULL_SLIDERS;
-			} else {
-				g_eeprom_data.cfg.flags &= ~FLAG_GC_FULL_SLIDERS;
-			}
-			break;
-		case CFG_PARAM_INVERT_TRIG:
-			if (value[0]) {
-				g_eeprom_data.cfg.flags |= FLAG_GC_INVERT_TRIGS;
-			} else {
-				g_eeprom_data.cfg.flags &= ~FLAG_GC_INVERT_TRIGS;
-			}
-			break;
-		case CFG_PARAM_TRIGGERS_AS_BUTTONS:
-			if (value[0]) {
-				g_eeprom_data.cfg.flags |= FLAG_GC_SLIDERS_AS_BUTTONS;
-			} else {
-				g_eeprom_data.cfg.flags &= ~FLAG_GC_SLIDERS_AS_BUTTONS;
-			}
+
 		default:
-			return 0;
+			for (i=0; paramsAndFlags[i].flag; i++) {
+				if (param == paramsAndFlags[i].param) {
+					if (value[0]) {
+						g_eeprom_data.cfg.flags |= paramsAndFlags[i].flag;
+					} else {
+						g_eeprom_data.cfg.flags &= ~paramsAndFlags[i].flag;
+					}
+					break;
+				}
+			}
+
+			// if we made it through the list without finding
+			// a matching parameter, do nothing.
+			if (!paramsAndFlags[i].flag) {
+				return 0;
+			}
 	}
 
 	eeprom_commit();

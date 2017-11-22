@@ -10,14 +10,17 @@ struct eeprom_cfg {
 	uint32_t flags;
 };
 
-#define FLAG_GC_FULL_SLIDERS	1
-#define FLAG_GC_INVERT_TRIGS	2
-#define FLAG_GC_SLIDERS_AS_BUTTONS	4
+#define FLAG_GC_FULL_SLIDERS			1
+#define FLAG_GC_INVERT_TRIGS			2
+#define FLAG_GC_SLIDERS_AS_BUTTONS		4
+#define FLAG_DISABLE_ANALOG_TRIGGERS	8
 
 void eeprom_app_write_defaults(void);
 void eeprom_app_ready(void);
 
 unsigned char config_setParam(unsigned char param, const unsigned char *value);
 unsigned char config_getParam(unsigned char param, unsigned char *value, unsigned char max_len);
+
+uint8_t config_getSupportedParams(uint8_t *dst);
 
 #endif
