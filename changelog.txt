@@ -1,5 +1,11 @@
 - Novembre ??, 2017 : Version 3.5.0
   - Add a "triggers as buttons" mode for Gamecube controllers
+  - Add a "disable analog triggers" mode for Gamecube controllers
+  - Internal changes to workaround a presumed Windows bug (Joystick ID
+  confusion where the second controller stops working or gives an
+  error in the Game controller test dialog)
+  - Implement a feature to let the adapter manager query the feature
+  set of the current firmware.
 
 - January 8, 2017 : Version 3.4.0
   - New IO request for even lower latency when using the raphnetraw plugins
