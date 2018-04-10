@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <avr/interrupt.h>
 #include "usb.h"
 #include "gamepads.h"
 #include "usbpad.h"
@@ -236,6 +237,18 @@ void usbpad_forceVibrate(struct usbpad *pad, char force)
 	pad->force_vibrate = force;
 }
 
+void usbpad_vibrationTask(struct usbpad *pad)
+{
+	uint8_t sreg;
+
+	sreg = SREG;
+	cli();
+	if (pad->_loop_count) {
+		pad->_loop_count--;
+	}
+	SREG = sreg;
+}
+
 char usbpad_mustVibrate(struct usbpad *pad)
 {
 	if (pad->force_vibrate) {
@@ -245,11 +258,16 @@ char usbpad_mustVibrate(struct usbpad *pad)
 	if (!pad->vibration_on) {
 		pad->gamepad_vibrate = 0;
 	} else {
-		if (pad->constant_force > 0x7f) {
-			pad->gamepad_vibrate = 1;
-		} else if (pad->periodic_magnitude > 0x7f) {
-			pad->gamepad_vibrate = 1;
+		if (pad->_loop_count > 0) {
+			if (pad->constant_force > 0x7f) {
+				pad->gamepad_vibrate = 1;
+			} else if (pad->periodic_magnitude > 0x7f) {
+				pad->gamepad_vibrate = 1;
+			} else {
+				pad->gamepad_vibrate = 0;
+			}
 		} else {
+			// Loop count = 0 -> Stop
 			pad->gamepad_vibrate = 0;
 		}
 	}
@@ -380,9 +398,12 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 				 * Byte 1 : bit 7=rom flag, bits 6-0=effect block index
 				 * Byte 2 : Effect operation
 				 * Byte 3 : Loop count */
-				pad->_loop_count = data[3]<<3;
 
-				printf_P(PSTR("EFFECT OP: rom=%s, idx=0x%02x"), data[1] & 0x80 ? "Yes":"No", data[1] & 0x7F);
+				 // scale this up so vibration stays on longer.
+				 // main.c uses a 16ms interval timer for vibration "loops"
+				pad->_loop_count = (data[3]+1)*3;
+
+				printf_P(PSTR("EFFECT OP: rom=%s, idx=0x%02x : "), data[1] & 0x80 ? "Yes":"No", data[1] & 0x7F);
 
 				switch(data[1] & 0x7F) // Effect block index
 				{

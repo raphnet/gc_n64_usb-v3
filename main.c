@@ -36,6 +36,7 @@
 #include "hiddata.h"
 #include "usbstrings.h"
 #include "intervaltimer.h"
+#include "intervaltimer2.h"
 #include "requests.h"
 #include "stkchk.h"
 
@@ -453,6 +454,7 @@ int main(void)
 	usart1_init();
 	eeprom_init();
 	intervaltimer_init();
+	intervaltimer2_init();
 	stkchk_init();
 
 	switch (g_eeprom_data.cfg.mode)
@@ -510,6 +512,9 @@ int main(void)
 	sei();
 	usb_init(&usb_params);
 
+	// Timebase for force feedback 'loop count'
+	intervaltimer2_set16ms();
+
 	while (1)
 	{
 		static char last_v[MAX_PLAYERS] = { };
@@ -520,6 +525,12 @@ int main(void)
 
 		usb_doTasks();
 		hiddata_doTask(&hiddata_ops);
+		// Run vibration tasks
+		if (intervaltimer2_get()) {
+			for (channel=0; channel < num_players; channel++) {
+				usbpad_vibrationTask(&usbpads[channel]);
+			}
+		}
 
 		switch(state)
 		{

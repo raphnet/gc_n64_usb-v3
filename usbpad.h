@@ -25,6 +25,7 @@ int usbpad_getReportSize(void);
 unsigned char *usbpad_getReportBuffer(struct usbpad *pad);
 
 void usbpad_update(struct usbpad *pad, const gamepad_data *pad_data);
+void usbpad_vibrationTask(struct usbpad *pad);
 char usbpad_mustVibrate(struct usbpad *pad);
 void usbpad_forceVibrate(struct usbpad *pad, char force);
 
