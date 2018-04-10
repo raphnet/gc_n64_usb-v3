@@ -49,6 +49,23 @@
 #define PID_SIMULTANEOUS_MAX	3
 #define PID_BLOCK_LOAD_REPORT	2
 
+#undef DEBUG
+
+#ifdef DEBUG
+static void hexdump(const unsigned char *ptr, int len)
+{
+	int i;
+
+	for (i=0; i<len; i++) {
+		printf_P(PSTR("%02x "), ptr[i]);
+	}
+	printf_P(PSTR("\n"));
+}
+#else
+#define printf_P(...)
+#define hexdump(...)
+#endif
+
 static void buildIdleReport(unsigned char dstbuf[USBPAD_REPORT_SIZE]);
 
 void usbpad_init(struct usbpad *pad)
@@ -380,16 +397,19 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 			case REPORT_SET_EFFECT:
 				pad->_FFB_effect_index = data[1];
 				printf_P(PSTR("set effect %d\r\n"), data[1]);
+				hexdump(data, len);
 				break;
 			case REPORT_SET_PERIODIC:
 				pad->periodic_magnitude = data[2];
-				printf_P(PSTR("periodic mag: %d"), data[2]);
+				printf_P(PSTR("periodic mag: %d\r\n"), data[2]);
+				hexdump(data, len);
 				break;
 			case REPORT_SET_CONSTANT_FORCE:
 				if (data[1] == 1) {
 					pad->constant_force = data[2];
 					printf_P(PSTR("Constant force %d\r\n"), data[2]);
 				}
+				hexdump(data, len);
 				break;
 			case REPORT_EFFECT_OPERATION:
 				if (len != 4)
@@ -413,18 +433,21 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 						switch (data[2]) // effect operation
 						{
 							case EFFECT_OP_START:
-								printf_P(PSTR("Start\r\n"));
+								printf_P(PSTR("Start (lp=%d)\r\n"), pad->_loop_count);
 								pad->vibration_on = 1;
 								break;
 
 							case EFFECT_OP_START_SOLO:
-								printf_P(PSTR("Start solo\r\n"));
+								printf_P(PSTR("Start solo (lp=%d)\r\n"), pad->_loop_count);
 								pad->vibration_on = 1;
 								break;
 
 							case EFFECT_OP_STOP:
-								printf_P(PSTR("Stop\r\n"));
+								printf_P(PSTR("Stop (lp=%d)\r\n"), pad->_loop_count);
 								pad->vibration_on = 0;
+								break;
+							default:
+								printf_P(PSTR("OP?? %02x (lp=%d)\r\n"), data[2], pad->_loop_count);
 								break;
 						}
 						break;
