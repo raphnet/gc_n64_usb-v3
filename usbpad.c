@@ -421,7 +421,7 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 
 				 // scale this up so vibration stays on longer.
 				 // main.c uses a 16ms interval timer for vibration "loops"
-				pad->_loop_count = (data[3]+1)*3;
+				pad->_loop_count = (data[3])*1;
 
 				printf_P(PSTR("EFFECT OP: rom=%s, idx=0x%02x : "), data[1] & 0x80 ? "Yes":"No", data[1] & 0x7F);
 
