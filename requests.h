@@ -2,6 +2,7 @@
 #define _gcn64_requests_h__
 
 /* Commands */
+#define RQ_GCN64_ECHO					0x00
 #define RQ_GCN64_SET_CONFIG_PARAM		0x01
 #define RQ_GCN64_GET_CONFIG_PARAM		0x02
 #define RQ_GCN64_SUSPEND_POLLING		0x03

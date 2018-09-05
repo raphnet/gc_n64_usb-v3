@@ -134,8 +134,15 @@ static void hiddata_processCommandBuffer(struct hiddata_ops *ops)
 //	printf("Process cmd 0x%02x\r\n", cmdbuf[0]);
 	switch(cmdbuf[0])
 	{
+		case RQ_GCN64_ECHO:
+			// Cmd : RQ, data[]
+			// Answer: RQ, data[]
+			break;
 		case RQ_GCN64_JUMP_TO_BOOTLOADER:
 			enterBootLoader();
+			break;
+		case RQ_RNT_RESET_FIRMWARE:
+			resetFirmware();
 			break;
 		case RQ_GCN64_RAW_SI_COMMAND:
 			// TODO : Range checking

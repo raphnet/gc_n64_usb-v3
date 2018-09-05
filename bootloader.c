@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB adapter firmware
-	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2018  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 */
 #include <avr/io.h>
 #include "usb.h"
+#include "bootloader.h"
 
 void enterBootLoader(void)
 {
@@ -28,5 +29,16 @@ void enterBootLoader(void)
 		"ldi r30, 0x00	\n" // ZL
 		"ldi r31, 0xF0	\n" // ZH
 		"ijmp");
+}
 
+void resetFirmware(void)
+{
+	usb_shutdown();
+
+	// jump to the application reset vector
+	asm volatile(
+		"cli			\n"
+		"ldi r30, 0x00	\n"
+		"ldi r31, 0x00	\n"
+		"ijmp");
 }
