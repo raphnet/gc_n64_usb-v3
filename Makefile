@@ -42,7 +42,7 @@ $(PROGNAME).elf: $(OBJS)
 
 $(PROGNAME).hex: $(PROGNAME).elf
 	avr-objcopy -j .data -j .text -O ihex $(PROGNAME).elf $(PROGNAME).hex
-	avr-size $(PROGNAME).elf
+	avr-size $(PROGNAME).elf -C --mcu=$(CPU)
 
 fuse:
 
