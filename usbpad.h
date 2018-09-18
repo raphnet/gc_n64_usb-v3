@@ -12,6 +12,7 @@ struct usbpad {
 	unsigned char constant_force;
 	unsigned char periodic_magnitude;
 
+	unsigned short _FFB_effect_duration; // in milliseconds
 	unsigned char _FFB_effect_index;
 #define LOOP_MAX    0xFFFF
 	unsigned int _loop_count;

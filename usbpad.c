@@ -396,12 +396,13 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 				break;
 			case REPORT_SET_EFFECT:
 				pad->_FFB_effect_index = data[1];
-				printf_P(PSTR("set effect %d\r\n"), data[1]);
+				pad->_FFB_effect_duration = data[3] | (data[4]<<8);
+				printf_P(PSTR("set effect %d. duration: %u\r\n"), data[1], pad->_FFB_effect_duration);
 				hexdump(data, len);
 				break;
 			case REPORT_SET_PERIODIC:
 				pad->periodic_magnitude = data[2];
-				printf_P(PSTR("periodic mag: %d\r\n"), data[2]);
+				printf_P(PSTR("Set periodic - mag: %d, period: %u\r\n"), data[2], data[5] | (data[6]<<8));
 				hexdump(data, len);
 				break;
 			case REPORT_SET_CONSTANT_FORCE:
@@ -412,18 +413,32 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 				hexdump(data, len);
 				break;
 			case REPORT_EFFECT_OPERATION:
-				if (len != 4)
+				if (len != 4) {
+					printf_P(PSTR("Hey!\r\n"));
 					return -1;
+				}
 				/* Byte 0 : report ID
 				 * Byte 1 : bit 7=rom flag, bits 6-0=effect block index
 				 * Byte 2 : Effect operation
 				 * Byte 3 : Loop count */
 
-				 // scale this up so vibration stays on longer.
-				 // main.c uses a 16ms interval timer for vibration "loops"
-				pad->_loop_count = (data[3])*1;
 
 				printf_P(PSTR("EFFECT OP: rom=%s, idx=0x%02x : "), data[1] & 0x80 ? "Yes":"No", data[1] & 0x7F);
+
+				// With dolphin, an "infinite" duration is set. The effect is started, then never
+				// stopped. Maybe I misunderstood something? In any case, the following works
+				// and feels about right.
+				if (pad->_FFB_effect_duration == 0xffff) {
+					if (data[3]) {
+						pad->_loop_count = data[3] + 1; // +1 for a bit more strength
+					} else {
+						pad->_loop_count = 0;
+					}
+				} else {
+			 		// main.c uses a 16ms interval timer for vibration "loops"
+					pad->_loop_count = (pad->_FFB_effect_duration / 16) * data[3];
+					printf_P(PSTR("%d loops for %d ms\r\n"), data[3], pad->_loop_count * 16);
+				}
 
 				switch(data[1] & 0x7F) // Effect block index
 				{
@@ -453,7 +468,7 @@ uint8_t usbpad_hid_set_report(struct usbpad *pad, const struct usb_request *rq, 
 						break;
 
 					// TODO : should probably drop these from the descriptor since they are
-
+					default:
 					case 2: // ramp
 					case 5: // triangle
 					case 6: // sawtooth up
