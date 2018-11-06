@@ -6,6 +6,7 @@
 #define PAD_TYPE_NONE       0
 #define PAD_TYPE_N64        4
 #define PAD_TYPE_GAMECUBE   5
+#define PAD_TYPE_GC_KB	  	6
 
 #define N64_RAW_SIZE        4
 #define GC_RAW_SIZE         8
@@ -69,11 +70,17 @@ typedef struct _gc_pad_data {
 
 #define GC_ALL_BUTTONS      (GC_BTN_START|GC_BTN_Y|GC_BTN_X|GC_BTN_B|GC_BTN_A|GC_BTN_L|GC_BTN_R|GC_BTN_Z|GC_BTN_DPAD_UP|GC_BTN_DPAD_DOWN|GC_BTN_DPAD_RIGHT|GC_BTN_DPAD_LEFT)
 
+typedef struct _gc_keyboard_data {
+	unsigned char pad_type;
+	unsigned char keys[3];
+} gc_keyboard_data;
+
 typedef struct _gamepad_data {
 	union {
 		unsigned char pad_type; // PAD_TYPE_*
 		n64_pad_data n64;
 		gc_pad_data gc;
+		gc_keyboard_data gckb;
 	};
 } gamepad_data;
 

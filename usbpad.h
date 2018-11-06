@@ -36,4 +36,7 @@ uint16_t usbpad_hid_get_report(struct usbpad *pad, struct usb_request *rq, const
 // For mappings. ID starts at 0.
 #define USB_BTN(id)	(0x0001 << (id))
 
+int usbpad_getReportSizeKB(void);
+void usbpad_update_kb(struct usbpad *pad, const gamepad_data *pad_data);
+
 #endif // USBPAD_H__

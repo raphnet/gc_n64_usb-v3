@@ -24,7 +24,9 @@
 
 /*********** prototypes *************/
 static void gamecubeInit(unsigned char chn);
+static void gamecubeInitKB(unsigned char chn);
 static char gamecubeUpdate(unsigned char chn);
+static char gamecubeUpdateKB(unsigned char chn);
 static char gamecubeChanged(unsigned char chn);
 
 static char gc_rumbling[GAMEPAD_MAX_CHANNELS] = { };
@@ -37,6 +39,11 @@ static unsigned char orig_cy[GAMEPAD_MAX_CHANNELS];
 static void gamecubeInit(unsigned char chn)
 {
 	gamecubeUpdate(chn);
+}
+
+static void gamecubeInitKB(unsigned char chn)
+{
+	gamecubeUpdateKB(chn);
 }
 
 void gc_decodeAnswer(unsigned char chn, unsigned char data[8])
@@ -115,6 +122,39 @@ void gc_decodeAnswer(unsigned char chn, unsigned char data[8])
 	}
 }
 
+static char gamecubeUpdateKB(unsigned char chn)
+{
+	unsigned char tmpdata[GC_GETSTATUS_REPLY_LENGTH];
+	unsigned char count;
+	unsigned char i, lrc;
+
+	tmpdata[0] = GC_POLL_KB1;
+	tmpdata[1] = GC_POLL_KB2;
+	tmpdata[2] = GC_POLL_KB3;
+
+	count = gcn64_transaction(chn, tmpdata, 3, tmpdata, GC_GETSTATUS_REPLY_LENGTH);
+	if (count != GC_GETSTATUS_REPLY_LENGTH) {
+		return 1;
+	}
+
+	// Compute LRC
+	for (i=0, lrc=0; i<6; i++) {
+		lrc ^= tmpdata[i];
+	}
+
+	if (tmpdata[7] != lrc) {
+		return 1; // LRC error
+	}
+
+	// Ok, fill the report
+	last_built_report[chn].pad_type = PAD_TYPE_GC_KB;
+	for (i=0; i<3; i++) {
+		last_built_report[chn].gckb.keys[i] = tmpdata[4+i];
+	}
+
+	return 0;
+}
+
 static char gamecubeUpdate(unsigned char chn)
 {
 	unsigned char tmpdata[GC_GETSTATUS_REPLY_LENGTH];
@@ -181,3 +221,17 @@ Gamepad *gamecubeGetGamepad(void)
 {
 	return &GamecubeGamepad;
 }
+
+Gamepad GamecubeKeyboard = {
+	.init					= gamecubeInitKB,
+	.update					= gamecubeUpdateKB,
+	.changed				= gamecubeChanged,
+	.getReport				= gamecubeGetReport,
+	.probe					= gamecubeProbe,
+};
+
+Gamepad *gamecubeGetKeyboard(void)
+{
+	return &GamecubeKeyboard;
+}
+

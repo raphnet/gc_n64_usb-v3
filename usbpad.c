@@ -24,6 +24,8 @@
 #include "mappings.h"
 #include "eeprom.h"
 #include "config.h"
+#include "hid_keycodes.h"
+#include "gc_kb.h"
 
 #define REPORT_ID	1
 
@@ -110,6 +112,18 @@ static void buildIdleReport(unsigned char dstbuf[USBPAD_REPORT_SIZE])
 	/* Inactive buttons */
 	dstbuf[13] = 0;
 	dstbuf[14] = 0;
+}
+
+int usbpad_getReportSizeKB(void)
+{
+	return 3;
+}
+
+static void buildIdleReportKB(unsigned char dstbuf[USBPAD_REPORT_SIZE])
+{
+	dstbuf[0] = HID_KB_NOEVENT;
+	dstbuf[1] = HID_KB_NOEVENT;
+	dstbuf[2] = HID_KB_NOEVENT;
 }
 
 static void buildReportFromGC(const gc_pad_data *gc_data, unsigned char dstbuf[USBPAD_REPORT_SIZE])
@@ -248,6 +262,22 @@ void usbpad_update(struct usbpad *pad, const gamepad_data *pad_data)
 		}
 	}
 }
+
+void usbpad_update_kb(struct usbpad *pad, const gamepad_data *pad_data)
+{
+	unsigned char i;
+
+	/* Always start with an idle report. Specific report builders can just
+	 * simply ignore unused parts */
+	buildIdleReportKB(pad->gamepad_report0);
+
+	if (pad_data->pad_type == PAD_TYPE_GC_KB) {
+		for (i=0; i<3; i++) {
+			pad->gamepad_report0[i] = gcKeycodeToHID(pad_data->gckb.keys[i]);
+		}
+	}
+}
+
 
 void usbpad_forceVibrate(struct usbpad *pad, char force)
 {
