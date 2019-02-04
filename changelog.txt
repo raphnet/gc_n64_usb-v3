@@ -1,3 +1,6 @@
+- Next release
+  - Add very basic N64 mouse support (detect and treat it like a controller)
+
 - November 6, 2018 : Version 3.6.0
   - Add gamecube keyboard support
 
