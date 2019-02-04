@@ -6,6 +6,7 @@
 #define CONTROLLER_IS_GC			2
 #define CONTROLLER_IS_GC_KEYBOARD	3
 #define CONTROLLER_IS_UNKNOWN		4
+#define CONTROLLER_IS_N64_MOUSE		5
 
 
 /* Return many unknown bits, but two are about the expansion port. */

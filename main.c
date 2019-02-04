@@ -553,6 +553,7 @@ Gamepad *detectPad(unsigned char chn)
 		case CONTROLLER_IS_UNKNOWN:
 			return NULL;
 
+		case CONTROLLER_IS_N64_MOUSE:
 		case CONTROLLER_IS_N64:
 			return n64GetGamepad();
 

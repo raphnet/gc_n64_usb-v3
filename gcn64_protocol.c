@@ -181,6 +181,9 @@ int gcn64_detectController(unsigned char chn)
 	 * 0000 0101 0000 0000 0000 0001 : 0x050001 With expansion pack
 	 * 0000 0101 0000 0000 0000 0010 : 0x050002 Expansion pack removed
 	 *
+	 * -- N64 mouse --
+	 * 0000 0010 0000 0000 0000 0000 : 0x020000
+	 *
 	 * -- Ascii keyboard (keyboard connector)
 	 * 0000 1000 0010 0000 0000 0000 : 0x082000
 	 *
@@ -215,6 +218,9 @@ int gcn64_detectController(unsigned char chn)
 #endif
 
 	switch ((id >> 8) & 0x0F) {
+		case 0x02:
+			return CONTROLLER_IS_N64_MOUSE;
+
 		case 0x05:
 			return CONTROLLER_IS_N64;
 
