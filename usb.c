@@ -785,7 +785,7 @@ void usb_doTasks(void)
 	}
 }
 
-#if defined(__AVR_ATmega32U2__)
+#if defined(__AVR_ATmega32U2__) || defined(__AVR_ATmega32U4__)
 
 /* Atmega32u2 datasheet 8.11.6, PLLCSR.
  * But register summary says PLLP0... */
@@ -851,8 +851,10 @@ void usb_init(const struct usb_parameters *params)
 	USBCON |= (1<<FRZCLK); // initial value
 #ifdef UHWCON
 	UHWCON |= (1<<UVREGE); // Enable USB pad regulator
+	#if defined(UIDE) && defined(UIMOD)
 	UHWCON &= ~(1<<UIDE);
 	UHWCON |= (1<UIMOD);
+	#endif
 #endif
 
 #ifdef UPOE
