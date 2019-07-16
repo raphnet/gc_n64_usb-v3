@@ -54,10 +54,10 @@ justflash: $(HEXFILE)
 	./scripts/wait_then_flash.sh $(CPU) $(HEXFILE)
 
 chip_erase:
-	dfu-programmer atmega32u2 erase
+	dfu-programmer $(CPU) erase
 
 reset:
-	dfu-programmer atmega32u2 reset
+	dfu-programmer $(CPU) reset
 
 restart:
 	- ./scripts/enter_bootloader.sh
