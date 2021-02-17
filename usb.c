@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2021  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@
 #define STATE_CONFIGURED	3
 
 static volatile uint8_t g_usb_suspend;
-static uint8_t g_ep0_buf[64];
+//static uint8_t g_ep0_buf[64];
 static uint8_t g_device_state = STATE_DEFAULT;
 static uint8_t g_current_config;
 static void *interrupt_data;
@@ -127,6 +127,36 @@ static void setupEndpoints()
 			return;
 		}
 	}
+}
+
+// Requires UENUM already set
+static uint16_t getEPlen(void)
+{
+#ifdef UEBCHX
+	return UEBCLX | (UEBCHX << 8);
+#else
+	return UEBCLX;
+#endif
+}
+
+// Requires UENUM already set
+// writes up to n bytes
+static uint16_t readEP2buf_n(void *dstbuf, int n)
+{
+	uint16_t len;
+	int i;
+	uint8_t *dst = dstbuf;
+#ifdef UEBCHX
+	len = UEBCLX | (UEBCHX << 8);
+#else
+	len = UEBCLX;
+#endif
+	for (i=0; i<len && i<n; i++) {
+		*dst = UEDATX;
+		dst++;
+	}
+
+	return i;
 }
 
 // Requires UENUM already set
@@ -627,23 +657,26 @@ ISR(USB_COM_vect)
 		i = UEINTX;
 
 		if (i & (1<<RXSTPI)) {
-		//	printf_P(PSTR("RXSTPI\r\n"));
-			readEP2buf(g_ep0_buf);
+			struct usb_request rq;
+//			readEP2buf(g_ep0_buf);
+			readEP2buf_n(&rq, sizeof(struct usb_request));
 			UEINTX &= ~(1<<RXSTPI);
-			handleSetupPacket((struct usb_request *)g_ep0_buf);
+			handleSetupPacket(&rq);
 		}
 
 		if (i & (1<<RXOUTI)) {
 			uint16_t len;
-			len = readEP2buf(g_ep0_buf);
-			UEINTX &= ~(1<<RXOUTI);
+
+			len = getEPlen();
+
 			if (control_write_in_progress) {
-			//	printf_P(PSTR("chunk: %d\r\n"), len);
 				if (control_write_len + len < CONTROL_WRITE_BUFSIZE) {
-					memcpy(control_write_buf + control_write_len, g_ep0_buf, len);
+					readEP2buf(control_write_buf + control_write_len);
 					control_write_len += len;
 				}
 			}
+
+			UEINTX &= ~(1<<RXOUTI);
 		}
 
 		if (i & (1<<NAKINI)) {
