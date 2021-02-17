@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2016  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2021  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include "gamepads.h"
 #include "n64.h"
 #include "gcn64_protocol.h"
+#include "eeprom.h"
 
 #undef BUTTON_A_RUMBLE_TEST
 
@@ -109,6 +110,18 @@ static char n64Update(unsigned char chn)
 		n64_rumble_state[chn] = RSTATE_INIT;
 		return -1;
 	}
+
+	/* The brawler 64 wireless gamepad does not like when the get caps command is followed
+	 * too closely by the get status command. Without a long pause between the two commands,
+	 * it just returns an all zeros. */
+	if (g_eeprom_data.cfg.poll_interval[0] >= 4) {
+		_delay_ms(2.5);
+	} else if (g_eeprom_data.cfg.poll_interval[0] >= 3) {
+		_delay_ms(1.5);
+	} else if (g_eeprom_data.cfg.poll_interval[0] >= 2) {
+		_delay_ms(1.25); // does not work at 1ms
+	}
+
 
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
 	if ((caps[2] & 0x01) && (n64_rumble_state[chn] == RSTATE_UNAVAILABLE)) {
