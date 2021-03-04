@@ -22,6 +22,7 @@
 #include "n64.h"
 #include "gcn64_protocol.h"
 #include "eeprom.h"
+#include "main.h" // for num_players
 
 #undef BUTTON_A_RUMBLE_TEST
 
@@ -113,15 +114,37 @@ static char n64Update(unsigned char chn)
 
 	/* The brawler 64 wireless gamepad does not like when the get caps command is followed
 	 * too closely by the get status command. Without a long pause between the two commands,
-	 * it just returns an all zeros. */
-	if (g_eeprom_data.cfg.poll_interval[0] >= 4) {
-		_delay_ms(2.5);
-	} else if (g_eeprom_data.cfg.poll_interval[0] >= 3) {
-		_delay_ms(1.5);
-	} else if (g_eeprom_data.cfg.poll_interval[0] >= 2) {
-		_delay_ms(1.25); // does not work at 1ms
+	 * it just returns all zeros. */
+	if (num_players > 1) {
+		// n64Update is called two times on two-player adapters. This
+		// means time lost waiting here doubles. Without this, the controllers
+		// are no longer being polled at the rate set in the gui, which is bad.
+		// (I want this setting to be reliable)
+		//
+		// So on dual port adapters, brawler 64 wireless controllers will be
+		// usable only at intervals >= 4ms.
+		//
+		// TODO: Interleave access like this to allow a higher polling
+		// frequency: Read caps port 1, Read caps port 2, delay, Read status port 1,
+		// read status port 2. (Maybe this could make 3ms intervals work)
+		//
+		if (g_eeprom_data.cfg.poll_interval[0] >= 8) {
+			_delay_ms(2.5);
+		} else if (g_eeprom_data.cfg.poll_interval[0] >= 6) {
+			_delay_ms(1.5);
+		} else if (g_eeprom_data.cfg.poll_interval[0] >= 4) {
+			_delay_ms(1.25);
+		}
 	}
-
+	else {
+		if (g_eeprom_data.cfg.poll_interval[0] >= 4) {
+			_delay_ms(2.5);
+		} else if (g_eeprom_data.cfg.poll_interval[0] >= 3) {
+			_delay_ms(1.5);
+		} else if (g_eeprom_data.cfg.poll_interval[0] >= 2) {
+			_delay_ms(1.25); // does not work at 1ms
+		}
+	}
 
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
 	if ((caps[2] & 0x01) && (n64_rumble_state[chn] == RSTATE_UNAVAILABLE)) {
