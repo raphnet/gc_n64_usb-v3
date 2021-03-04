@@ -541,6 +541,7 @@ void hwinit(void)
 }
 
 
+uint8_t num_players = 1;
 unsigned char current_pad_type[NUM_CHANNELS] = { };
 
 Gamepad *detectPad(unsigned char chn)
@@ -661,7 +662,6 @@ int main(void)
 	uint8_t gamepad_vibrate = 0;
 	uint8_t state = STATE_WAIT_POLLTIME;
 	uint8_t channel;
-	uint8_t num_players = 1;
 	uint8_t i;
 
 	hwinit();
@@ -851,7 +851,6 @@ int keyboard_main(void)
 	uint8_t gamepad_vibrate = 0;
 	uint8_t state = STATE_WAIT_POLLTIME;
 	uint8_t channel;
-	uint8_t num_players = 1;
 	uint8_t i;
 
 	hwinit();
