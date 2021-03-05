@@ -1,6 +1,14 @@
-- Next release
+- Future ideas / TODO
   - Add very basic N64 mouse support (detect and treat it like a controller)
   - Add support for Atmega32u4 MCU
+
+- March 5, 2021 : Version 3.6.1
+  - Alter timing so the brawler64 wireless gamepad will work. Those will now
+    work with a poll interval >= 2ms on single port adapters, and >= 4ms on dual
+    port adapters.
+  - Add a feature to swap the main analog stick and the D-Pad
+  - Save memory in usb.c (no user visible effects)
+  - Correct bootloader entry address (*maybe* less chances of failing)
 
 - November 6, 2018 : Version 3.6.0
   - Add gamecube keyboard support

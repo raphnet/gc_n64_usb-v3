@@ -10,10 +10,11 @@ struct eeprom_cfg {
 	uint32_t flags;
 };
 
-#define FLAG_GC_FULL_SLIDERS			1
-#define FLAG_GC_INVERT_TRIGS			2
-#define FLAG_GC_SLIDERS_AS_BUTTONS		4
-#define FLAG_DISABLE_ANALOG_TRIGGERS	8
+#define FLAG_GC_FULL_SLIDERS			0x01
+#define FLAG_GC_INVERT_TRIGS			0x02
+#define FLAG_GC_SLIDERS_AS_BUTTONS		0x04
+#define FLAG_DISABLE_ANALOG_TRIGGERS	0x08
+#define FLAG_SWAP_STICK_AND_DPAD		0x10
 
 void eeprom_app_write_defaults(void);
 void eeprom_app_ready(void);
