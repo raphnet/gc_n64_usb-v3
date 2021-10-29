@@ -18,6 +18,7 @@ The project is released under the General Public License version 3.
 
 You will need a working avr-gcc toolchain with avr-libc and standard utilities such as make. Just
 type 'make' and it should build just fine. Under Linux at least.
+If you are compiling for a custom board or Arduino running on an ATmega32u4, then run 'make -f Makefile.32u4' instead.
 
 ## Programming the firmware
 
