@@ -26,7 +26,7 @@ void enterBootLoader(void)
 	usb_shutdown();
 	_delay_ms(10);
 
-#if defined(__AVR_ATmega32U2__)
+#if defined(__AVR_ATmega32U2__) || defined(__AVR_ATmega32U4__)
 	// ATmega32u2   : 0x3800
 	asm volatile(
 		"cli			\n"
