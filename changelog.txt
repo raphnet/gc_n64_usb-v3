@@ -1,6 +1,5 @@
 - Future ideas / TODO
   - Add very basic N64 mouse support (detect and treat it like a controller)
-  - Add support for Atmega32u4 MCU
 
 - March 5, 2021 : Version 3.6.1
   - Alter timing so the brawler64 wireless gamepad will work. Those will now
